@@ -15,6 +15,9 @@ const Chatbot: React.FC = () => {
             <p className="text-muted-foreground">
               Get information about medications, side effects, interactions, herbal alternatives, and dietary recommendations
             </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Your chat history is saved automatically. Clear conversations using the reset button.
+            </p>
           </div>
           <ChatInterface />
         </div>

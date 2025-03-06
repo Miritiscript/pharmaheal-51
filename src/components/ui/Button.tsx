@@ -2,6 +2,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
+export const buttonVariants = {
+  default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground shadow hover:bg-secondary/90',
+  outline: 'bg-transparent border border-border hover:bg-accent',
+  ghost: 'bg-transparent hover:bg-accent',
+  link: 'bg-transparent text-primary underline-offset-4 hover:underline',
+  sizes: {
+    default: 'h-10 px-4 py-2',
+    sm: 'h-9 px-3',
+    lg: 'h-11 px-8',
+    icon: 'h-10 w-10 p-0',
+  }
+};
+
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'outline' | 'ghost' | 'link' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';

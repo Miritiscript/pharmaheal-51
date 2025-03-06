@@ -1,21 +1,19 @@
 
 import React from 'react';
-import Hero from '@/components/home/Hero';
-import Features from '@/components/home/Features';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import VideoHub from '@/components/videos/VideoHub';
 
-const Index: React.FC = () => {
+const Videos: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1">
-        <Hero />
-        <Features />
+      <main className="flex-1 pt-24 pb-16">
+        <VideoHub />
       </main>
       <Footer />
     </div>
   );
 };
 
-export default Index;
+export default Videos;

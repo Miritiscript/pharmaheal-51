@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Send, RefreshCw, Pill, AlertCircle, User, Bot } from 'lucide-react';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 
 interface Message {
   id: string;

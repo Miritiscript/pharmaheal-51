@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { ChevronRight, Play, ExternalLink, Filter } from 'lucide-react';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 
 interface Video {
   id: string;
@@ -69,7 +68,6 @@ const VideoHub: React.FC = () => {
     { id: "nutrition", name: "Nutrition" },
   ];
 
-  // Mock videos data
   const videos: Video[] = [
     {
       id: "1",
@@ -102,7 +100,7 @@ const VideoHub: React.FC = () => {
     {
       id: "5",
       title: "Managing Asthma: Triggers and Treatments",
-      thumbnail: "https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aW5oYWxlcnxlbnwwfHwwfHx8MA%3D%3D",
+      thumbnail: "https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8YW50aWJpb3RpY3N8ZW58MHx8MHx8fDA%3D",
       duration: "4:55",
       category: "Chronic Disease",
     },

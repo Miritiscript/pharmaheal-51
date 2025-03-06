@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquareText, Play, ArrowRight } from 'lucide-react';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 
 const Hero: React.FC = () => {
   const navigate = useNavigate();

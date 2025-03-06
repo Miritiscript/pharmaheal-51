@@ -11,9 +11,9 @@ const Chatbot: React.FC = () => {
       <main className="flex-1 pt-24 pb-16 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">AI Medical Assistant</h1>
+            <h1 className="text-3xl font-bold mb-2">AI Pharmacy Assistant</h1>
             <p className="text-muted-foreground">
-              Ask questions about medications, symptoms, or health conditions
+              Get information about medications, side effects, interactions, herbal alternatives, and dietary recommendations
             </p>
           </div>
           <ChatInterface />

@@ -2,32 +2,43 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import VideoRow from './VideoRow';
 import VideoPlayer from './VideoPlayer';
 import { Video, VideoCategory, mockCategories } from '@/data/mockVideos';
+import { fetchVideoCategories } from '@/services/youtubeService';
+import VideoSkeleton from './VideoSkeleton';
+import { toast } from 'sonner';
 
 const VideoHub: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [categories, setCategories] = useState<VideoCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
+  const { theme } = useTheme();
   
   // Parse the query parameters
   const queryParams = new URLSearchParams(location.search);
   const categoryParam = queryParams.get('category');
 
   useEffect(() => {
-    // Simulate loading of data
-    const loadMockData = () => {
+    const loadVideos = async () => {
       setIsLoading(true);
-      // Simulate API call delay
-      setTimeout(() => {
+      try {
+        const fetchedCategories = await fetchVideoCategories();
+        setCategories(fetchedCategories);
+        toast.success("Videos loaded successfully");
+      } catch (error) {
+        console.error("Error loading videos:", error);
+        // Fallback to mock data if API fails
         setCategories(mockCategories);
+        toast.error("Couldn't load videos from YouTube, using cached data instead");
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     };
     
-    loadMockData();
+    loadVideos();
   }, []);
 
   useEffect(() => {
@@ -60,20 +71,14 @@ const VideoHub: React.FC = () => {
     return [...sameCategoryVideos, ...otherVideos];
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading video library...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page-container px-4">
-      {selectedVideo ? (
+    <div className={`page-container px-4 transition-colors duration-300 ${theme === 'dark' ? 'text-white' : ''}`}>
+      {isLoading ? (
+        <div className="space-y-8">
+          <VideoSkeleton />
+          <VideoSkeleton />
+        </div>
+      ) : selectedVideo ? (
         <VideoPlayer 
           video={selectedVideo} 
           onClose={() => setSelectedVideo(null)} 
@@ -82,9 +87,9 @@ const VideoHub: React.FC = () => {
         />
       ) : (
         <>
-          <div className="mb-8">
+          <div className="mb-8 animate-fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <h1 className="text-3xl font-bold">Educational Video Hub</h1>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-pharma-600 to-healing-600 bg-clip-text text-transparent">Educational Video Hub</h1>
             </div>
             
             <div className="glass-card p-4 mb-8">
@@ -94,7 +99,7 @@ const VideoHub: React.FC = () => {
             </div>
             
             {categories.map((category) => (
-              <div key={category.id} id={`category-${category.id}`}>
+              <div key={category.id} id={`category-${category.id}`} className="animate-slide-up">
                 <VideoRow 
                   category={category} 
                   onVideoClick={handleVideoClick} 

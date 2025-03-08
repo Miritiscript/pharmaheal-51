@@ -99,47 +99,50 @@ export const mockCategories: VideoCategory[] = [
         description: 'An evidence-based look at superfoods and their actual health benefits.'
       }
     ]
-  },
-  {
-    id: 'medications',
-    title: 'Medication Information',
-    videos: [
-      {
-        id: 'med1',
-        videoId: 'med1',
-        title: 'How Antibiotics Work and When to Use Them',
-        thumbnail: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60',
-        duration: '09:30',
-        category: 'Medication Information',
-        description: 'Learn about the mechanism of antibiotics and their appropriate use to prevent resistance.'
-      },
-      {
-        id: 'med2',
-        videoId: 'med2',
-        title: 'Understanding Common Side Effects of Medications',
-        thumbnail: 'https://images.unsplash.com/photo-1550572017-262dde405233?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60',
-        duration: '11:15',
-        category: 'Medication Information',
-        description: 'A guide to recognizing and managing common medication side effects.'
-      },
-      {
-        id: 'med3',
-        videoId: 'med3',
-        title: 'Medication Adherence: Why It Matters',
-        thumbnail: 'https://images.unsplash.com/photo-1551884170-09fb70a3a2ed?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60',
-        duration: '08:50',
-        category: 'Medication Information',
-        description: 'Understand the importance of taking medications as prescribed and strategies to improve adherence.'
-      },
-      {
-        id: 'med4',
-        videoId: 'med4',
-        title: 'Drug Interactions: What You Need to Know',
-        thumbnail: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60',
-        duration: '12:10',
-        category: 'Medication Information',
-        description: 'Essential information about how different medications can interact with each other and with food.'
-      }
-    ]
   }
 ];
+
+// YouTube API types
+export interface YouTubeVideo {
+  id: {
+    videoId: string;
+  };
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: {
+      high: {
+        url: string;
+      };
+      medium: {
+        url: string;
+      };
+    };
+    channelTitle: string;
+    publishedAt: string;
+  };
+  contentDetails?: {
+    duration: string;
+  };
+}
+
+export interface YouTubeSearchResponse {
+  items: YouTubeVideo[];
+  nextPageToken?: string;
+}
+
+// Convert YouTube API response to our Video type
+export const convertYouTubeToVideos = (
+  youtubeVideos: YouTubeVideo[], 
+  category: string
+): Video[] => {
+  return youtubeVideos.map((video) => ({
+    id: video.id.videoId,
+    title: video.snippet.title,
+    thumbnail: video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium?.url,
+    duration: "Preview",
+    category,
+    description: video.snippet.description,
+    videoId: video.id.videoId,
+  }));
+};

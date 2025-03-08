@@ -17,23 +17,23 @@
     --primary: 210 100% 47%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 150 76% 40%;
-    --secondary-foreground: 150 40% 98%;
+    --secondary: 324 100% 50%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 210 20% 94%;
     --muted-foreground: 215 20% 45%;
 
-    --accent: 210 30% 92%;
-    --accent-foreground: 220 20% 12%;
+    --accent: 324 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 210 100% 47%;
+    --ring: 324 100% 50%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   .dark {
@@ -49,21 +49,21 @@
     --primary: 210 100% 47%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 150 76% 40%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 324 100% 40%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 33% 16%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 324 100% 40%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217 33% 18%;
     --input: 217 33% 18%;
-    --ring: 212 27% 84%;
+    --ring: 324 80% 60%;
   }
 }
 
@@ -84,15 +84,15 @@
 
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-elevation-1;
   }
 
   .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg rounded-xl;
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-elevation-2 rounded-xl;
   }
 
   .glass-dark {
-    @apply bg-gray-900/80 backdrop-blur-md border border-gray-800/40 shadow-md;
+    @apply bg-gray-900/80 backdrop-blur-md border border-gray-800/40 shadow-elevation-1;
   }
 
   .text-balance {
@@ -104,10 +104,31 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-pharma-600 to-healing-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-vibrant-pink to-vibrant-teal bg-clip-text text-transparent;
   }
 
   .page-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12;
+  }
+  
+  .vibrant-shadow {
+    @apply shadow-[0_4px_14px_rgba(255,0,212,0.25)];
+  }
+  
+  .vibrant-border {
+    @apply border border-vibrant-pink/30;
+  }
+  
+  .vibrant-glow {
+    @apply shadow-[0_0_15px_rgba(255,0,212,0.5)];
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

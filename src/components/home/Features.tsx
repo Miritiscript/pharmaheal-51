@@ -1,16 +1,21 @@
 
 import React from 'react';
-import { BrainCircuit, PlayCircle, Pill, Search, HeartPulse, ClipboardCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BrainCircuit, PlayCircle, HeartPulse, Leaf } from 'lucide-react';
 
 interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
+  onClick?: () => void;
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
+const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, onClick }) => {
   return (
-    <div className="glass-card p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+    <div 
+      className="glass-card p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex flex-col space-y-4">
         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
           {icon}
@@ -23,36 +28,48 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) =
 };
 
 const Features: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleNavigateToChatbot = () => {
+    navigate('/chatbot');
+  };
+
+  const handleNavigateToVideos = () => {
+    navigate('/videos');
+  };
+
+  const handleNavigateToChronicDiseaseVideos = () => {
+    navigate('/videos?category=chronic');
+  };
+
+  const handleNavigateToNutritionVideos = () => {
+    navigate('/videos?category=nutrition');
+  };
+
   const features = [
     {
       icon: <BrainCircuit className="w-6 h-6" />,
       title: "AI Medical Assistant",
-      description: "Get reliable answers to your medical questions using our advanced AI chatbot."
+      description: "Get reliable answers to your medical questions using our advanced AI chatbot.",
+      onClick: handleNavigateToChatbot
     },
     {
       icon: <PlayCircle className="w-6 h-6" />,
       title: "Educational Videos",
-      description: "Watch curated educational videos about diseases, treatments, and wellness topics."
-    },
-    {
-      icon: <Pill className="w-6 h-6" />,
-      title: "Drug Information",
-      description: "Learn about medications, their uses, side effects, and potential interactions."
-    },
-    {
-      icon: <Search className="w-6 h-6" />,
-      title: "Universal Search",
-      description: "Find any medical information quickly with our powerful search functionality."
+      description: "Watch curated educational videos about diseases, treatments, and wellness topics.",
+      onClick: handleNavigateToVideos
     },
     {
       icon: <HeartPulse className="w-6 h-6" />,
       title: "Chronic Disease Management",
-      description: "Access resources to help manage chronic health conditions effectively."
+      description: "Access resources to help manage chronic health conditions effectively.",
+      onClick: handleNavigateToChronicDiseaseVideos
     },
     {
-      icon: <ClipboardCheck className="w-6 h-6" />,
-      title: "Reliable Sources",
-      description: "All information is sourced from reputable medical resources and research."
+      icon: <Leaf className="w-6 h-6" />,
+      title: "Nutrition & Wellness",
+      description: "Learn about healthy food choices and lifestyle practices for optimal wellbeing.",
+      onClick: handleNavigateToNutritionVideos
     }
   ];
 
@@ -68,7 +85,7 @@ const Features: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -79,6 +96,7 @@ const Features: React.FC = () => {
                 icon={feature.icon}
                 title={feature.title}
                 description={feature.description}
+                onClick={feature.onClick}
               />
             </div>
           ))}

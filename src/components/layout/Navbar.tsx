@@ -1,12 +1,24 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Home, MessageSquare, PlayCircle, Search } from 'lucide-react';
 import { Button } from '../ui/Button';
+import SearchBar from '../search/SearchBar';
+import SearchResults from '../search/SearchResults';
+import { searchContent } from '@/services/searchService';
+import { fetchVideoCategories } from '@/services/youtubeService';
+import { mockCategories } from '@/data/mockVideos';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState({ videos: [], chatMessages: [] });
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [categories, setCategories] = useState(mockCategories);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,12 +29,59 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    // Load video categories for search
+    const loadCategories = async () => {
+      try {
+        const fetchedCategories = await fetchVideoCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Error loading categories for search:", error);
+        // Fall back to mock data
+      }
+    };
+    
+    loadCategories();
+  }, []);
+
   const handleToggle = () => {
     setIsOpen(!isOpen);
   };
 
   const closeMenu = () => {
     setIsOpen(false);
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      // Get chat history from localStorage
+      let chatHistory = [];
+      try {
+        const savedChats = localStorage.getItem('pharmacy-chat-history');
+        if (savedChats) {
+          const chats = JSON.parse(savedChats);
+          if (chats.length > 0) {
+            chatHistory = chats[0].messages.map(msg => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading chat history for search:', error);
+      }
+
+      const results = searchContent(query, {
+        videos: categories,
+        chatHistory: chatHistory
+      });
+      setSearchResults(results);
+      setIsSearchOpen(true);
+    } else {
+      setSearchResults({ videos: [], chatMessages: [] });
+      setIsSearchOpen(false);
+    }
   };
 
   const isActive = (path: string) => {
@@ -68,15 +127,33 @@ const Navbar: React.FC = () => {
                 {item.label}
               </Link>
             ))}
-            <Button
-              variant="default"
-              size="sm"
-              className="ml-2 flex items-center gap-2"
-              onClick={() => console.log('Search clicked')}
-            >
-              <Search className="w-4 h-4" />
-              <span>Search</span>
-            </Button>
+            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="ml-2 flex items-center gap-2"
+                  onClick={() => setIsSearchOpen(true)}
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Search</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <div className="p-3 border-b">
+                  <SearchBar 
+                    onSearch={handleSearch} 
+                    placeholder="Search videos, chat history..." 
+                  />
+                </div>
+                {isSearchOpen && (
+                  <SearchResults 
+                    results={searchResults} 
+                    onClose={() => setIsSearchOpen(false)} 
+                  />
+                )}
+              </PopoverContent>
+            </Popover>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -108,15 +185,20 @@ const Navbar: React.FC = () => {
                   {item.label}
                 </Link>
               ))}
-              <Button
-                variant="default"
-                size="sm"
-                className="mt-2 w-full flex items-center justify-center gap-2"
-                onClick={() => console.log('Search clicked')}
-              >
-                <Search className="w-4 h-4" />
-                <span>Search</span>
-              </Button>
+              <div className="mt-2 p-2">
+                <SearchBar 
+                  onSearch={handleSearch} 
+                  placeholder="Search videos, chat history..." 
+                />
+                {searchQuery && (
+                  <div className="mt-2 max-h-60 overflow-y-auto bg-background rounded-md shadow-md">
+                    <SearchResults 
+                      results={searchResults} 
+                      onClose={() => setSearchQuery('')} 
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

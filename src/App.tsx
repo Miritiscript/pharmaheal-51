@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Chatbot from "./pages/Chatbot";
 import Videos from "./pages/Videos";
 import NotFound from "./pages/NotFound";
+import InstallPWA from "./components/pwa/InstallPWA";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <InstallPWA />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import VideoRow from './VideoRow';
@@ -9,11 +8,18 @@ import { Video, VideoCategory, mockCategories } from '@/data/mockVideos';
 import { fetchVideoCategories } from '@/services/youtubeService';
 import VideoSkeleton from './VideoSkeleton';
 import { toast } from 'sonner';
+import SearchBar from '../search/SearchBar';
+import { searchContent } from '@/services/searchService';
+import { Button } from '../ui/Button';
+import { Filter } from 'lucide-react';
 
 const VideoHub: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [categories, setCategories] = useState<VideoCategory[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<VideoCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const location = useLocation();
   const { theme } = useTheme();
   
@@ -27,11 +33,13 @@ const VideoHub: React.FC = () => {
       try {
         const fetchedCategories = await fetchVideoCategories();
         setCategories(fetchedCategories);
+        setFilteredCategories(fetchedCategories);
         toast.success("Videos loaded successfully");
       } catch (error) {
         console.error("Error loading videos:", error);
         // Fallback to mock data if API fails
         setCategories(mockCategories);
+        setFilteredCategories(mockCategories);
         toast.error("Couldn't load videos from YouTube, using cached data instead");
       } finally {
         setIsLoading(false);
@@ -48,8 +56,57 @@ const VideoHub: React.FC = () => {
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
+      
+      // Also set the filter to match the category param
+      setActiveFilter(categoryParam);
+      filterCategories(categoryParam);
     }
   }, [categoryParam, isLoading]);
+
+  // Handle search
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
+    if (query.trim() === '') {
+      // Reset to show all categories or the active filter
+      if (activeFilter) {
+        filterCategories(activeFilter);
+      } else {
+        setFilteredCategories(categories);
+      }
+      return;
+    }
+    
+    // Search through all videos
+    const results = searchContent(query, { videos: categories }).videos;
+    
+    // Group search results by category
+    const searchResultCategories: VideoCategory[] = [];
+    
+    categories.forEach(category => {
+      const categoryVideos = results.filter(video => video.category === category.title);
+      if (categoryVideos.length > 0) {
+        searchResultCategories.push({
+          ...category,
+          videos: categoryVideos
+        });
+      }
+    });
+    
+    setFilteredCategories(searchResultCategories);
+  };
+
+  const filterCategories = (filterId: string | null) => {
+    setActiveFilter(filterId);
+    
+    if (!filterId) {
+      setFilteredCategories(categories);
+      return;
+    }
+    
+    const filtered = categories.filter(category => category.id === filterId);
+    setFilteredCategories(filtered);
+  };
 
   const handleVideoClick = (video: Video) => {
     setSelectedVideo(video);
@@ -71,6 +128,11 @@ const VideoHub: React.FC = () => {
     return [...sameCategoryVideos, ...otherVideos];
   };
 
+  const filterButtons = [
+    { id: null, label: 'All' },
+    ...categories.map(cat => ({ id: cat.id, label: cat.title }))
+  ];
+
   return (
     <div className={`page-container px-4 transition-colors duration-300 ${theme === 'dark' ? 'text-white' : ''}`}>
       {isLoading ? (
@@ -90,6 +152,32 @@ const VideoHub: React.FC = () => {
           <div className="mb-8 animate-fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-pharma-600 to-healing-600 bg-clip-text text-transparent">Educational Video Hub</h1>
+              
+              <div className="w-full sm:w-auto">
+                <SearchBar 
+                  onSearch={handleSearch} 
+                  placeholder="Search videos..." 
+                  className="w-full sm:w-64"
+                />
+              </div>
+            </div>
+            
+            {/* Filter Buttons */}
+            <div className="overflow-x-auto pb-4 mb-4">
+              <div className="flex space-x-2">
+                {filterButtons.map((filter) => (
+                  <Button
+                    key={filter.id || 'all'}
+                    variant={activeFilter === filter.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => filterCategories(filter.id)}
+                    className="whitespace-nowrap"
+                  >
+                    {filter.id === null && <Filter className="w-4 h-4 mr-1" />}
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
             </div>
             
             <div className="glass-card p-4 mb-8">
@@ -98,14 +186,31 @@ const VideoHub: React.FC = () => {
               </p>
             </div>
             
-            {categories.map((category) => (
-              <div key={category.id} id={`category-${category.id}`} className="animate-slide-up">
-                <VideoRow 
-                  category={category} 
-                  onVideoClick={handleVideoClick} 
-                />
+            {filteredCategories.length > 0 ? (
+              filteredCategories.map((category) => (
+                <div key={category.id} id={`category-${category.id}`} className="animate-slide-up">
+                  <VideoRow 
+                    category={category} 
+                    onVideoClick={handleVideoClick} 
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">No videos found matching your search criteria.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActiveFilter(null);
+                    setFilteredCategories(categories);
+                  }}
+                >
+                  Clear filters
+                </Button>
               </div>
-            ))}
+            )}
           </div>
         </>
       )}

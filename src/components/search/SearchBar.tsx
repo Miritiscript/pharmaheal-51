@@ -8,12 +8,14 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   placeholder?: string;
   className?: string;
+  minimal?: boolean; // Added minimal prop
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
   onSearch, 
   placeholder = "Search...", 
-  className = "" 
+  className = "",
+  minimal = false // Default to false
 }) => {
   const [query, setQuery] = useState('');
 
@@ -38,15 +40,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          className="pl-10 pr-10 w-full h-10 rounded-full focus:ring-2 focus:ring-primary/20"
+          className={`${minimal ? 'pl-8 pr-8 h-9 w-36' : 'pl-10 pr-10 w-full h-10'} rounded-full focus:ring-2 focus:ring-primary/20`}
         />
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className={`absolute left-${minimal ? '2' : '3'} top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
         {query && (
           <Button 
             type="button" 
             variant="ghost" 
             size="icon" 
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-full"
+            className={`absolute right-0 top-1/2 transform -translate-y-1/2 ${minimal ? 'h-7 w-7' : 'h-8 w-8'} rounded-full`}
             onClick={clearSearch}
           >
             <X className="h-4 w-4" />

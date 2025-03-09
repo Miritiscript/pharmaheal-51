@@ -21,6 +21,13 @@ const Navbar: React.FC = () => {
     return location.pathname === path;
   };
 
+  // Add search handler function
+  const handleSearch = (query: string) => {
+    console.log('Search query:', query);
+    // Implement search functionality here or navigate to search results page
+    // Example: navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
   return (
     <nav className="fixed top-0 w-full z-50 shadow-md backdrop-blur-lg bg-background/80 dark:bg-dark-surface/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,11 +72,11 @@ const Navbar: React.FC = () => {
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
-            <SearchBar />
+            <SearchBar onSearch={handleSearch} />
             <ThemeToggle />
           </div>
           <div className="-mr-2 flex items-center sm:hidden space-x-2">
-            <SearchBar minimal />
+            <SearchBar onSearch={handleSearch} minimal={true} />
             <ThemeToggle />
             <button
               onClick={toggleMenu}

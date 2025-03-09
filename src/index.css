@@ -78,7 +78,7 @@
   }
 
   .light-mode {
-    @apply bg-gradient-to-r from-instagram-purple via-instagram-pink to-instagram-orange;
+    @apply bg-gradient-to-r from-instagram-purple via-instagram-pink to-instagram-orange bg-fixed;
   }
 
   .dark-mode {

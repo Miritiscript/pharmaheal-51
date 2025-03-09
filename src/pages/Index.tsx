@@ -4,12 +4,15 @@ import Hero from '@/components/home/Hero';
 import Features from '@/components/home/Features';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { useTheme } from '@/components/theme/ThemeProvider';
 
 const Index: React.FC = () => {
+  const { theme } = useTheme();
+  
   return (
-    <div className="flex flex-col min-h-screen transition-all duration-300">
+    <div className={`flex flex-col min-h-screen transition-all duration-300 ${theme === 'dark' ? 'dark' : 'light'}`}>
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 z-10">
         <Hero />
         <Features />
       </main>

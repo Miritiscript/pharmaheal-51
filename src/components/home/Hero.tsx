@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Link } from 'react-router-dom';
 import { MessageSquareText, Play } from 'lucide-react';
-import PharmacyHeroImage from './PharmacyHeroImage';
+import PharmacyImagesGrid from './PharmacyImagesGrid';
 
 const Hero: React.FC = () => {
   return (
@@ -34,8 +34,8 @@ const Hero: React.FC = () => {
               </Button>
             </div>
           </div>
-          <div className="w-full h-[400px] lg:h-[500px] animate-slide-up">
-            <PharmacyHeroImage />
+          <div className="w-full animate-slide-up">
+            <PharmacyImagesGrid />
           </div>
         </div>
       </div>

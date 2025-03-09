@@ -10,7 +10,7 @@ const Index: React.FC = () => {
   const { theme } = useTheme();
   
   return (
-    <div className={`flex flex-col min-h-screen transition-all duration-300 ${theme === 'dark' ? 'dark' : 'light'}`}>
+    <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark' : 'light'}`}>
       <Navbar />
       <main className="flex-1 z-10">
         <Hero />

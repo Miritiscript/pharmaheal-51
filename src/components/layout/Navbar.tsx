@@ -1,209 +1,131 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Home, MessageSquare, PlayCircle, Search } from 'lucide-react';
-import { Button } from '../ui/Button';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import SearchBar from '../search/SearchBar';
-import SearchResults from '../search/SearchResults';
-import { searchContent } from '@/services/searchService';
-import { fetchVideoCategories } from '@/services/youtubeService';
-import { mockCategories } from '@/data/mockVideos';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ThemeToggle } from '../theme/ThemeToggle';
 
 const Navbar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState({ videos: [], chatMessages: [] });
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [categories, setCategories] = useState(mockCategories);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    // Load video categories for search
-    const loadCategories = async () => {
-      try {
-        const fetchedCategories = await fetchVideoCategories();
-        setCategories(fetchedCategories);
-      } catch (error) {
-        console.error("Error loading categories for search:", error);
-        // Fall back to mock data
-      }
-    };
-    
-    loadCategories();
-  }, []);
-
-  const handleToggle = () => {
-    setIsOpen(!isOpen);
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   const closeMenu = () => {
-    setIsOpen(false);
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      // Get chat history from localStorage
-      let chatHistory = [];
-      try {
-        const savedChats = localStorage.getItem('pharmacy-chat-history');
-        if (savedChats) {
-          const chats = JSON.parse(savedChats);
-          if (chats.length > 0) {
-            chatHistory = chats[0].messages.map(msg => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp)
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error loading chat history for search:', error);
-      }
-
-      const results = searchContent(query, {
-        videos: categories,
-        chatHistory: chatHistory
-      });
-      setSearchResults(results);
-      setIsSearchOpen(true);
-    } else {
-      setSearchResults({ videos: [], chatMessages: [] });
-      setIsSearchOpen(false);
-    }
+    setIsMenuOpen(false);
   };
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  const navItems = [
-    { path: '/', label: 'Home', icon: <Home className="w-4 h-4 mr-2" /> },
-    { path: '/chatbot', label: 'AI Assistant', icon: <MessageSquare className="w-4 h-4 mr-2" /> },
-    { path: '/videos', label: 'Video Hub', icon: <PlayCircle className="w-4 h-4 mr-2" /> },
-  ];
-
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'py-2 glass shadow' : 'py-4 bg-transparent'
-      }`}
-    >
+    <nav className="fixed top-0 w-full z-50 shadow-md backdrop-blur-lg bg-background/80 dark:bg-dark-surface/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
-          <Link
-            to="/"
-            className="flex items-center space-x-2"
-            aria-label="PharmaHeal Home"
-            onClick={closeMenu}
-          >
-            <span className="text-2xl font-bold gradient-text">PharmaHeal</span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            <div className="flex-shrink-0 flex items-center">
+              <Link to="/" className="text-2xl font-bold gradient-text">
+                PharmaHeal
+              </Link>
+            </div>
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
-                key={item.path}
-                to={item.path}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
-                  isActive(item.path)
-                    ? 'bg-accent text-foreground'
-                    : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                to="/"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive('/')
+                    ? 'border-accent text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
                 }`}
               >
-                {item.icon}
-                {item.label}
+                Home
               </Link>
-            ))}
-            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="ml-2 flex items-center gap-2"
-                  onClick={() => setIsSearchOpen(true)}
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Search</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="end">
-                <div className="p-3 border-b">
-                  <SearchBar 
-                    onSearch={handleSearch} 
-                    placeholder="Search videos, chat history..." 
-                  />
-                </div>
-                {isSearchOpen && (
-                  <SearchResults 
-                    results={searchResults} 
-                    onClose={() => setIsSearchOpen(false)} 
-                  />
-                )}
-              </PopoverContent>
-            </Popover>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden flex items-center text-foreground"
-            onClick={handleToggle}
-            aria-label={isOpen ? 'Close menu' : 'Open menu'}
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden mt-2 animate-fade-in">
-            <div className="glass-card rounded-lg p-2 my-2">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
-                    isActive(item.path)
-                      ? 'bg-accent text-foreground'
-                      : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                  }`}
-                  onClick={closeMenu}
-                >
-                  {item.icon}
-                  {item.label}
-                </Link>
-              ))}
-              <div className="mt-2 p-2">
-                <SearchBar 
-                  onSearch={handleSearch} 
-                  placeholder="Search videos, chat history..." 
-                />
-                {searchQuery && (
-                  <div className="mt-2 max-h-60 overflow-y-auto bg-background rounded-md shadow-md">
-                    <SearchResults 
-                      results={searchResults} 
-                      onClose={() => setSearchQuery('')} 
-                    />
-                  </div>
-                )}
-              </div>
+              <Link
+                to="/chatbot"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive('/chatbot')
+                    ? 'border-accent text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                }`}
+              >
+                AI Assistant
+              </Link>
+              <Link
+                to="/videos"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive('/videos')
+                    ? 'border-accent text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                }`}
+              >
+                Videos
+              </Link>
             </div>
           </div>
-        )}
+          <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
+            <SearchBar />
+            <ThemeToggle />
+          </div>
+          <div className="-mr-2 flex items-center sm:hidden space-x-2">
+            <SearchBar minimal />
+            <ThemeToggle />
+            <button
+              onClick={toggleMenu}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <span className="sr-only">Open main menu</span>
+              {isMenuOpen ? (
+                <X className="block h-6 w-6" aria-hidden="true" />
+              ) : (
+                <Menu className="block h-6 w-6" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
       </div>
-    </header>
+
+      {isMenuOpen && (
+        <div className="sm:hidden">
+          <div className="pt-2 pb-3 space-y-1">
+            <Link
+              to="/"
+              className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                isActive('/')
+                  ? 'border-accent text-accent-foreground bg-accent/10'
+                  : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+              }`}
+              onClick={closeMenu}
+            >
+              Home
+            </Link>
+            <Link
+              to="/chatbot"
+              className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                isActive('/chatbot')
+                  ? 'border-accent text-accent-foreground bg-accent/10'
+                  : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+              }`}
+              onClick={closeMenu}
+            >
+              AI Assistant
+            </Link>
+            <Link
+              to="/videos"
+              className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                isActive('/videos')
+                  ? 'border-accent text-accent-foreground bg-accent/10'
+                  : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+              }`}
+              onClick={closeMenu}
+            >
+              Videos
+            </Link>
+          </div>
+        </div>
+      )}
+    </nav>
   );
 };
 

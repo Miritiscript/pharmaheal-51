@@ -37,13 +37,13 @@
   }
 
   .dark {
-    --background: 220 20% 10%;
+    --background: 0 0% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 220 20% 12%;
+    --card: 0 0% 12%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 220 20% 12%;
+    --popover: 0 0% 12%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 100% 47%;
@@ -73,8 +73,16 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+  }
+
+  .light-mode {
+    @apply bg-gradient-to-r from-instagram-purple via-instagram-pink to-instagram-orange;
+  }
+
+  .dark-mode {
+    @apply bg-dark-bg;
   }
 
   html {
@@ -105,6 +113,10 @@
   
   .gradient-text {
     @apply bg-gradient-to-r from-vibrant-pink to-vibrant-teal bg-clip-text text-transparent;
+  }
+
+  .instagram-gradient {
+    @apply bg-gradient-to-r from-instagram-purple via-instagram-pink to-instagram-orange;
   }
 
   .page-container {

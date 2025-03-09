@@ -4,7 +4,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import SearchBar from '../search/SearchBar';
 import { ThemeToggle } from '../theme/ThemeToggle';
-import { searchContent } from '@/services/searchService';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,13 +19,6 @@ const Navbar: React.FC = () => {
 
   const isActive = (path: string) => {
     return location.pathname === path;
-  };
-
-  // Add a search handler function
-  const handleSearch = (query: string) => {
-    console.log('Search query:', query);
-    // Here you would typically handle the search 
-    // For example, navigating to a search results page or showing results in a dropdown
   };
 
   return (
@@ -73,11 +65,11 @@ const Navbar: React.FC = () => {
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
-            <SearchBar onSearch={handleSearch} />
+            <SearchBar />
             <ThemeToggle />
           </div>
           <div className="-mr-2 flex items-center sm:hidden space-x-2">
-            <SearchBar onSearch={handleSearch} minimal={true} />
+            <SearchBar minimal />
             <ThemeToggle />
             <button
               onClick={toggleMenu}

@@ -5,13 +5,13 @@ import { useTheme } from 'next-themes';
 import VideoRow from './VideoRow';
 import VideoPlayer from './VideoPlayer';
 import { Video, VideoCategory, mockCategories } from '@/data/mockVideos';
-import { fetchVideoCategories } from '@/services/youtubeService';
+import { fetchVideoCategories, setUseYouTubeAPI } from '@/services/youtubeService';
 import VideoSkeleton from './VideoSkeleton';
 import { toast } from 'sonner';
 import SearchBar from '../search/SearchBar';
 import { searchContent } from '@/services/searchService';
 import { Button } from '../ui/Button';
-import { Filter } from 'lucide-react';
+import { Filter, RefreshCw } from 'lucide-react';
 
 const VideoHub: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -20,6 +20,7 @@ const VideoHub: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [usingLiveData, setUsingLiveData] = useState(false);
   const location = useLocation();
   const { theme } = useTheme();
   
@@ -31,16 +32,19 @@ const VideoHub: React.FC = () => {
     const loadVideos = async () => {
       setIsLoading(true);
       try {
+        // Use mock data by default (API is disabled in the service)
         const fetchedCategories = await fetchVideoCategories();
         setCategories(fetchedCategories);
         setFilteredCategories(fetchedCategories);
         toast.success("Videos loaded successfully");
+        setUsingLiveData(false);
       } catch (error) {
         console.error("Error loading videos:", error);
-        // Fallback to mock data if API fails
+        // Fallback to mock data if API fails (already handled in service)
         setCategories(mockCategories);
         setFilteredCategories(mockCategories);
         toast.error("Couldn't load videos from YouTube, using cached data instead");
+        setUsingLiveData(false);
       } finally {
         setIsLoading(false);
       }
@@ -128,6 +132,33 @@ const VideoHub: React.FC = () => {
     return [...sameCategoryVideos, ...otherVideos];
   };
 
+  const toggleLiveData = async () => {
+    setIsLoading(true);
+    try {
+      // Toggle between mock and API data
+      setUseYouTubeAPI(!usingLiveData);
+      
+      // Reload videos with new setting
+      const fetchedCategories = await fetchVideoCategories();
+      setCategories(fetchedCategories);
+      setFilteredCategories(fetchedCategories);
+      
+      if (!usingLiveData) {
+        toast.success("Attempting to use live YouTube data");
+        setUsingLiveData(true);
+      } else {
+        toast.success("Using cached data to avoid API quota issues");
+        setUsingLiveData(false);
+      }
+    } catch (error) {
+      console.error("Error toggling data source:", error);
+      toast.error("Error changing data source, using cached data");
+      setUsingLiveData(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filterButtons = [
     { id: null, label: 'All' },
     ...categories.map(cat => ({ id: cat.id, label: cat.title }))
@@ -162,27 +193,43 @@ const VideoHub: React.FC = () => {
               </div>
             </div>
             
-            {/* Filter Buttons */}
-            <div className="overflow-x-auto pb-4 mb-4">
-              <div className="flex space-x-2">
-                {filterButtons.map((filter) => (
-                  <Button
-                    key={filter.id || 'all'}
-                    variant={activeFilter === filter.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => filterCategories(filter.id)}
-                    className="whitespace-nowrap"
-                  >
-                    {filter.id === null && <Filter className="w-4 h-4 mr-1" />}
-                    {filter.label}
-                  </Button>
-                ))}
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
+              {/* Filter Buttons */}
+              <div className="overflow-x-auto pb-4">
+                <div className="flex space-x-2">
+                  {filterButtons.map((filter) => (
+                    <Button
+                      key={filter.id || 'all'}
+                      variant={activeFilter === filter.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => filterCategories(filter.id)}
+                      className="whitespace-nowrap"
+                    >
+                      {filter.id === null && <Filter className="w-4 h-4 mr-1" />}
+                      {filter.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
+              
+              {/* Data source toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleLiveData}
+                className="flex items-center space-x-1"
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                {usingLiveData ? "Use Cached Data" : "Try Live Data"}
+              </Button>
             </div>
             
             <div className="glass-card p-4 mb-8">
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Educational note:</span> These videos provide general health information. Remember to consult with healthcare professionals for personalized advice.
+                {!usingLiveData && (
+                  <span className="ml-1 text-muted-foreground"> (Using cached data to avoid API quota limits)</span>
+                )}
               </p>
             </div>
             

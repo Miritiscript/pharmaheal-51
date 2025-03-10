@@ -26,9 +26,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
         <div className="space-y-2">
           <div className="flex items-center text-primary font-medium gap-2">
             <Pill className="w-4 h-4" />
-            <h3>Drug Recommendations</h3>
+            <h3>✅ Drug Recommendations</h3>
           </div>
-          <div className="pl-6 text-sm">{drugRecommendations}</div>
+          <div className="pl-6 text-sm whitespace-pre-line">{drugRecommendations}</div>
         </div>
       )}
       
@@ -36,9 +36,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
         <div className="space-y-2">
           <div className="flex items-center text-amber-500 font-medium gap-2">
             <AlertCircle className="w-4 h-4" />
-            <h3>Side Effects & Indications</h3>
+            <h3>✅ Side Effects & Indications</h3>
           </div>
-          <div className="pl-6 text-sm">{sideEffects}</div>
+          <div className="pl-6 text-sm whitespace-pre-line">{sideEffects.replace(/•/g, '🔹 ')}</div>
         </div>
       )}
       
@@ -46,9 +46,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
         <div className="space-y-2">
           <div className="flex items-center text-destructive font-medium gap-2">
             <XCircle className="w-4 h-4" />
-            <h3>Contraindications & Interactions</h3>
+            <h3>✅ Contraindications & Interactions</h3>
           </div>
-          <div className="pl-6 text-sm">{contraindications}</div>
+          <div className="pl-6 text-sm whitespace-pre-line">{contraindications.replace(/•/g, '⚠️ ')}</div>
         </div>
       )}
       
@@ -56,9 +56,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
         <div className="space-y-2">
           <div className="flex items-center text-green-600 font-medium gap-2">
             <Leaf className="w-4 h-4" />
-            <h3>Herbal Medicine Alternatives</h3>
+            <h3>✅ Herbal Medicine Alternatives</h3>
           </div>
-          <div className="pl-6 text-sm">{herbalAlternatives}</div>
+          <div className="pl-6 text-sm whitespace-pre-line">{herbalAlternatives.replace(/•/g, '🌿 ')}</div>
         </div>
       )}
       
@@ -66,9 +66,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
         <div className="space-y-2">
           <div className="flex items-center text-orange-500 font-medium gap-2">
             <Apple className="w-4 h-4" />
-            <h3>Food-Based Treatments</h3>
+            <h3>✅ Food-Based Treatments</h3>
           </div>
-          <div className="pl-6 text-sm">{foodBasedTreatments}</div>
+          <div className="pl-6 text-sm whitespace-pre-line">{foodBasedTreatments.replace(/•/g, '🍎 ')}</div>
         </div>
       )}
       

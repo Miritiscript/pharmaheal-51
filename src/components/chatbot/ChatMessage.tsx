@@ -3,6 +3,7 @@ import React from 'react';
 import { Bot, User, Loader2 } from 'lucide-react';
 import PharmacyResponse from './PharmacyResponse';
 import { Message } from './types';
+import { useTheme } from '@/components/theme/ThemeProvider';
 
 interface ChatMessageProps {
   message: Message;
@@ -10,6 +11,8 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false }) => {
+  const { theme } = useTheme();
+  
   return (
     <div
       className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
@@ -18,7 +21,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false })
         className={`max-w-[90%] ${
           message.isUser
             ? 'bg-primary text-primary-foreground rounded-t-xl rounded-bl-xl'
-            : 'glass rounded-t-xl rounded-br-xl'
+            : theme === 'dark' 
+              ? 'bg-dark-surface border border-dark-border text-foreground rounded-t-xl rounded-br-xl' 
+              : 'glass rounded-t-xl rounded-br-xl'
         } p-3 shadow-sm`}
       >
         <div className="flex items-start gap-2">

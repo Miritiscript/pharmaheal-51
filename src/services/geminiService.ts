@@ -21,12 +21,26 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
 You are an AI pharmacy assistant providing information about medications, treatments, and health conditions. 
 Provide accurate, comprehensive, and helpful information about the following query: "${query}"
 
-Format your response with the following sections:
+Format your response with the following sections, using bullet points for each item (not paragraphs):
+
 1. DRUG RECOMMENDATIONS: List effective medications with proper dosage guidelines
+   Format each recommendation as: "• Drug name – Recommended dosage"
+
 2. SIDE EFFECTS & INDICATIONS: Warnings on potential side effects and drug use cases
+   Format each item as: "• Main side effect/indication"
+
 3. CONTRAINDICATIONS & INTERACTIONS: Medical conditions, allergies, or drug interactions to be aware of
+   Format each item as: "• Contraindication/interaction"
+
 4. HERBAL MEDICINE ALTERNATIVES: Scientifically supported natural remedies if applicable
-5. FOOD-BASED TREATMENTS: Nutritional guidance and dietary recommendations if applicable
+   Format each item as: "• Herbal alternative - usage/dosage"
+
+5. FOOD-BASED TREATMENTS: Nutritional guidance and dietary recommendations
+   Format each item as: "• Food item - benefit"
+   THIS SECTION IS REQUIRED - Always include food-based treatments that may help with the condition
+   
+All information should be presented in bullet point format (•) for easy reading, never in paragraphs.
+Each section should have at least 3-5 bullet points with brief, concise information.
 
 Important: Always include a disclaimer that this information is not a substitute for professional medical advice.
 `;

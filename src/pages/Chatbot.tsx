@@ -3,6 +3,7 @@ import React from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ChatInterface from '@/components/chatbot/ChatInterface';
+import TrustedInformationSources from '@/components/chatbot/TrustedInformationSources';
 
 const Chatbot: React.FC = () => {
   return (
@@ -20,6 +21,7 @@ const Chatbot: React.FC = () => {
             </p>
           </div>
           <ChatInterface />
+          <TrustedInformationSources />
         </div>
       </main>
       <Footer />

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bot, User, Loader2 } from 'lucide-react';
+import { Bot, User } from 'lucide-react';
 import PharmacyResponse from './PharmacyResponse';
 import { Message } from './types';
 import { useTheme } from '@/components/theme/ThemeProvider';

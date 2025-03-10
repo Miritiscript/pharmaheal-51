@@ -1,7 +1,9 @@
 
 import React from 'react';
-import { Globe, Hospital, ShieldCheck, BookOpen, Microscope, Pill, Heart, Leaf, User } from 'lucide-react';
+import { Globe, BookOpen, Heart, Leaf } from 'lucide-react';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import InfoSourceCategory from './InfoSourceCategory';
+import InfoLink from './InfoLink';
 
 const TrustedInformationSources: React.FC = () => {
   const { theme } = useTheme();
@@ -15,214 +17,117 @@ const TrustedInformationSources: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Government & Health Organizations */}
-        <div>
-          <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
-            <Globe className="w-5 h-5 text-primary" />
-            Government & Health Organizations
-          </h3>
-          <ul className="space-y-2">
-            <li>
-              <a 
-                href="https://www.who.int/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🌍 World Health Organization (WHO)
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.cdc.gov/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🏥 Centers for Disease Control and Prevention (CDC)
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.nih.gov/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🇺🇸 National Institutes of Health (NIH)
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.nhs.uk/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🇬🇧 National Health Service (NHS)
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.fda.gov/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                💊 U.S. Food & Drug Administration (FDA)
-              </a>
-            </li>
-          </ul>
-        </div>
+        <InfoSourceCategory 
+          title="Government & Health Organizations" 
+          icon={<Globe className="w-5 h-5 text-primary" />}
+        >
+          <InfoLink 
+            href="https://www.who.int/" 
+            emoji="🌍" 
+            text="World Health Organization (WHO)" 
+          />
+          <InfoLink 
+            href="https://www.cdc.gov/" 
+            emoji="🏥" 
+            text="Centers for Disease Control and Prevention (CDC)" 
+          />
+          <InfoLink 
+            href="https://www.nih.gov/" 
+            emoji="🇺🇸" 
+            text="National Institutes of Health (NIH)" 
+          />
+          <InfoLink 
+            href="https://www.nhs.uk/" 
+            emoji="🇬🇧" 
+            text="National Health Service (NHS)" 
+          />
+          <InfoLink 
+            href="https://www.fda.gov/" 
+            emoji="💊" 
+            text="U.S. Food & Drug Administration (FDA)" 
+          />
+        </InfoSourceCategory>
 
         {/* Medical Research & Drug Databases */}
-        <div>
-          <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
-            <BookOpen className="w-5 h-5 text-primary" />
-            Medical Research & Drug Databases
-          </h3>
-          <ul className="space-y-2">
-            <li>
-              <a 
-                href="https://pubmed.ncbi.nlm.nih.gov/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                📚 PubMed
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.cochranelibrary.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🔬 Cochrane Library
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.drugs.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                💊 Drugs.com
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://medlineplus.gov/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🏥 MedlinePlus
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.rxlist.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                📖 RxList
-              </a>
-            </li>
-          </ul>
-        </div>
+        <InfoSourceCategory 
+          title="Medical Research & Drug Databases" 
+          icon={<BookOpen className="w-5 h-5 text-primary" />}
+        >
+          <InfoLink 
+            href="https://pubmed.ncbi.nlm.nih.gov/" 
+            emoji="📚" 
+            text="PubMed" 
+          />
+          <InfoLink 
+            href="https://www.cochranelibrary.com/" 
+            emoji="🔬" 
+            text="Cochrane Library" 
+          />
+          <InfoLink 
+            href="https://www.drugs.com/" 
+            emoji="💊" 
+            text="Drugs.com" 
+          />
+          <InfoLink 
+            href="https://medlineplus.gov/" 
+            emoji="🏥" 
+            text="MedlinePlus" 
+          />
+          <InfoLink 
+            href="https://www.rxlist.com/" 
+            emoji="📖" 
+            text="RxList" 
+          />
+        </InfoSourceCategory>
 
         {/* Health & Wellness Information */}
-        <div>
-          <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
-            <Heart className="w-5 h-5 text-primary" />
-            Health & Wellness Information
-          </h3>
-          <ul className="space-y-2">
-            <li>
-              <a 
-                href="https://www.mayoclinic.org/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🏥 Mayo Clinic
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://my.clevelandclinic.org/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                💡 Cleveland Clinic
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.healthline.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                📖 Healthline
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.health.harvard.edu/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🏛 Harvard Health
-              </a>
-            </li>
-          </ul>
-        </div>
+        <InfoSourceCategory 
+          title="Health & Wellness Information" 
+          icon={<Heart className="w-5 h-5 text-primary" />}
+        >
+          <InfoLink 
+            href="https://www.mayoclinic.org/" 
+            emoji="🏥" 
+            text="Mayo Clinic" 
+          />
+          <InfoLink 
+            href="https://my.clevelandclinic.org/" 
+            emoji="💡" 
+            text="Cleveland Clinic" 
+          />
+          <InfoLink 
+            href="https://www.healthline.com/" 
+            emoji="📖" 
+            text="Healthline" 
+          />
+          <InfoLink 
+            href="https://www.health.harvard.edu/" 
+            emoji="🏛" 
+            text="Harvard Health" 
+          />
+        </InfoSourceCategory>
 
         {/* Alternative & Herbal Medicine */}
-        <div>
-          <h3 className="flex items-center gap-2 text-lg font-semibold mb-3">
-            <Leaf className="w-5 h-5 text-primary" />
-            Alternative & Herbal Medicine
-          </h3>
-          <ul className="space-y-2">
-            <li>
-              <a 
-                href="https://www.nccih.nih.gov/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🌿 National Center for Complementary and Integrative Health (NCCIH)
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://examine.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🍃 Examine.com
-              </a>
-            </li>
-            <li>
-              <a 
-                href="https://www.herbmed.org/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-primary transition-colors"
-              >
-                🌱 HerbMed
-              </a>
-            </li>
-          </ul>
-        </div>
+        <InfoSourceCategory 
+          title="Alternative & Herbal Medicine" 
+          icon={<Leaf className="w-5 h-5 text-primary" />}
+        >
+          <InfoLink 
+            href="https://www.nccih.nih.gov/" 
+            emoji="🌿" 
+            text="National Center for Complementary and Integrative Health (NCCIH)" 
+          />
+          <InfoLink 
+            href="https://examine.com/" 
+            emoji="🍃" 
+            text="Examine.com" 
+          />
+          <InfoLink 
+            href="https://www.herbmed.org/" 
+            emoji="🌱" 
+            text="HerbMed" 
+          />
+        </InfoSourceCategory>
       </div>
     </div>
   );

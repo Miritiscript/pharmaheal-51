@@ -19,7 +19,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-elevation-1 hover:shadow-elevation-2",
         ghost: "hover:bg-accent/10 hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        vibrant: "bg-vibrant-pink text-white hover:bg-vibrant-pink-dark shadow-[0_4px_14px_rgba(255,0,212,0.3)] hover:shadow-[0_6px_20px_rgba(255,0,212,0.4)] transition-all",
+        vibrant: "bg-secondary text-white hover:bg-secondary/90 shadow-[0_4px_14px_rgba(76,175,80,0.3)] hover:shadow-[0_6px_20px_rgba(76,175,80,0.4)] transition-all",
       },
       size: {
         default: "h-10 px-4 py-2",

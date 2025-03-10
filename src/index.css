@@ -5,25 +5,25 @@
 
 @layer base {
   :root {
-    --background: 210 50% 98%;
-    --foreground: 220 20% 12%;
+    --background: 210 75% 95%; /* #E3F2FD light blue */
+    --foreground: 210 50% 23%; /* #1E3A56 dark blue */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 12%;
+    --card-foreground: 210 50% 23%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 12%;
+    --popover-foreground: 210 50% 23%;
 
     --primary: 210 100% 47%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 324 100% 50%;
+    --secondary: 122 39% 49%; /* #4CAF50 green */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 210 20% 94%;
     --muted-foreground: 215 20% 45%;
 
-    --accent: 324 100% 50%;
+    --accent: 122 39% 49%; /* #4CAF50 green */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -37,25 +37,25 @@
   }
 
   .dark {
-    --background: 0 0% 7%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 7%; /* #121212 dark charcoal */
+    --foreground: 210 75% 95%; /* #E3F2FD light blue */
 
     --card: 0 0% 12%;
-    --card-foreground: 210 40% 98%;
+    --card-foreground: 210 75% 95%;
 
     --popover: 0 0% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover-foreground: 210 75% 95%;
 
     --primary: 210 100% 47%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 324 100% 40%;
+    --secondary: 122 39% 49%; /* #4CAF50 green */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 324 100% 40%;
+    --accent: 122 39% 49%; /* #4CAF50 green */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
@@ -78,11 +78,11 @@
   }
 
   .light-mode {
-    @apply bg-gradient-to-r from-instagram-purple via-instagram-pink to-instagram-orange bg-fixed;
+    @apply bg-background;
   }
 
   .dark-mode {
-    @apply bg-dark-bg;
+    @apply bg-background;
   }
 
   html {
@@ -112,11 +112,7 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-vibrant-pink to-vibrant-teal bg-clip-text text-transparent;
-  }
-
-  .instagram-gradient {
-    @apply bg-gradient-to-r from-instagram-purple via-instagram-pink to-instagram-orange;
+    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
   }
 
   .page-container {
@@ -124,15 +120,15 @@
   }
   
   .vibrant-shadow {
-    @apply shadow-[0_4px_14px_rgba(255,0,212,0.25)];
+    @apply shadow-[0_4px_14px_rgba(76,175,80,0.25)];
   }
   
   .vibrant-border {
-    @apply border border-vibrant-pink/30;
+    @apply border border-secondary/30;
   }
   
   .vibrant-glow {
-    @apply shadow-[0_0_15px_rgba(255,0,212,0.5)];
+    @apply shadow-[0_0_15px_rgba(76,175,80,0.5)];
   }
   
   .no-scrollbar::-webkit-scrollbar {

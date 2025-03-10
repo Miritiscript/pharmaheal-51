@@ -29,7 +29,7 @@ const PharmacyImagesGrid: React.FC = () => {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
       {pharmacyImages.map((image, index) => (
         <div key={index} className="relative overflow-hidden rounded-xl shadow-elevation-2 aspect-square">
-          <div className="absolute inset-0 bg-gradient-to-br from-pharma-700/60 to-vibrant-pink-dark/40 z-10 mix-blend-multiply"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/60 to-secondary/40 z-10 mix-blend-multiply"></div>
           <img 
             src={image.url} 
             alt={image.alt} 

@@ -4,18 +4,12 @@ import { YouTubeSearchResponse, convertYouTubeToVideos, VideoCategory, mockCateg
 const API_KEY = "AIzaSyDL6bYbpjR_wWP5c-a5ubI4yTPtwcL_EVs";
 const BASE_URL = "https://www.googleapis.com/youtube/v3";
 
-// Flag to control API usage - set to false by default to avoid quota issues
-let useYouTubeAPI = false;
-
-// Function to toggle API usage
-export const setUseYouTubeAPI = (useAPI: boolean) => {
-  useYouTubeAPI = useAPI;
-};
+// Always try to use the API first
+let useYouTubeAPI = true;
 
 export const searchYouTubeVideos = async (query: string, maxResults = 8): Promise<YouTubeSearchResponse> => {
-  // If we're not using the API, return a mock response
   if (!useYouTubeAPI) {
-    console.log("Using mock data instead of YouTube API to avoid quota issues");
+    console.log("Using mock data due to previous API errors");
     // Create a mock response based on query
     const mockItems = mockCategories
       .flatMap(cat => cat.videos)
@@ -75,46 +69,56 @@ export const searchYouTubeVideos = async (query: string, maxResults = 8): Promis
 
 export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   try {
-    // If we're not using the API, return mock categories directly
-    if (!useYouTubeAPI) {
-      console.log("Using mock video categories instead of YouTube API");
+    // Always try to use the API first
+    if (useYouTubeAPI) {
+      console.log("Attempting to fetch live YouTube data");
+      
+      // Fetch chronic disease management videos
+      const diabetesResponse = await searchYouTubeVideos("diabetes management guide");
+      const heartDiseaseResponse = await searchYouTubeVideos("heart disease prevention");
+      
+      // Fetch nutrition & wellness videos
+      const nutritionResponse = await searchYouTubeVideos("healthy nutrition guide");
+      const wellnessResponse = await searchYouTubeVideos("wellness tips health");
+      
+      // Combine results into categories
+      const categories: VideoCategory[] = [
+        {
+          id: "chronic",
+          title: "Chronic Disease Management",
+          videos: [
+            ...convertYouTubeToVideos(diabetesResponse.items, "Chronic Disease Management"),
+            ...convertYouTubeToVideos(heartDiseaseResponse.items, "Chronic Disease Management"),
+          ],
+        },
+        {
+          id: "nutrition",
+          title: "Nutrition & Wellness",
+          videos: [
+            ...convertYouTubeToVideos(nutritionResponse.items, "Nutrition & Wellness"),
+            ...convertYouTubeToVideos(wellnessResponse.items, "Nutrition & Wellness"),
+          ],
+        },
+      ];
+      
+      return categories;
+    } else {
+      console.log("Using mock video categories due to previous API errors");
       return mockCategories;
     }
-    
-    // Fetch chronic disease management videos
-    const diabetesResponse = await searchYouTubeVideos("diabetes management guide");
-    const heartDiseaseResponse = await searchYouTubeVideos("heart disease prevention");
-    
-    // Fetch nutrition & wellness videos
-    const nutritionResponse = await searchYouTubeVideos("healthy nutrition guide");
-    const wellnessResponse = await searchYouTubeVideos("wellness tips health");
-    
-    // Combine results into categories
-    const categories: VideoCategory[] = [
-      {
-        id: "chronic",
-        title: "Chronic Disease Management",
-        videos: [
-          ...convertYouTubeToVideos(diabetesResponse.items, "Chronic Disease Management"),
-          ...convertYouTubeToVideos(heartDiseaseResponse.items, "Chronic Disease Management"),
-        ],
-      },
-      {
-        id: "nutrition",
-        title: "Nutrition & Wellness",
-        videos: [
-          ...convertYouTubeToVideos(nutritionResponse.items, "Nutrition & Wellness"),
-          ...convertYouTubeToVideos(wellnessResponse.items, "Nutrition & Wellness"),
-        ],
-      },
-    ];
-    
-    return categories;
   } catch (error) {
     console.error("Failed to fetch video categories:", error);
     console.warn("Falling back to mock categories due to error");
     
-    // Always fall back to mock data on error
+    // Mark the API as unavailable for future requests
+    useYouTubeAPI = false;
+    
+    // Return mock data on error
     return mockCategories;
   }
+};
+
+// Function is kept but is now internal only
+export const setUseYouTubeAPI = (useAPI: boolean) => {
+  useYouTubeAPI = useAPI;
 };

@@ -46,24 +46,24 @@
     --popover: 0 0% 12%;
     --popover-foreground: 210 75% 95%;
 
-    --primary: 210 100% 47%;
+    --primary: 210 100% 60%; /* Brightened from 47% to 60% */
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 122 39% 49%; /* #4CAF50 green */
+    --secondary: 122 39% 55%; /* Brightened from 49% to 55% */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 20% 75%; /* Brightened from 65% to 75% */
 
-    --accent: 122 39% 49%; /* #4CAF50 green */
+    --accent: 122 39% 55%; /* Brightened from 49% to 55% */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 63% 31%;
+    --destructive: 0 63% 45%; /* Brightened from 31% to 45% */
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 324 80% 60%;
+    --border: 217 33% 25%; /* Brightened from 18% to 25% */
+    --input: 217 33% 25%; /* Brightened from 18% to 25% */
+    --ring: 324 80% 65%; /* Brightened from 60% to 65% */
   }
 }
 
@@ -138,5 +138,23 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  
+  /* Dark mode specific utilities */
+  .dark .glass {
+    @apply bg-slate-800/70 backdrop-blur-md border border-slate-700/30 shadow-elevation-1;
+  }
+
+  .dark .glass-card {
+    @apply bg-slate-800/80 backdrop-blur-md border border-slate-700/30 shadow-elevation-2 rounded-xl;
+  }
+  
+  /* Improve contrast in dark mode */
+  .dark .chat-message-bot {
+    @apply bg-slate-800 border border-slate-700 text-white;
+  }
+  
+  .dark .pharmacy-response-section {
+    @apply bg-slate-700 text-white border border-slate-600;
   }
 }

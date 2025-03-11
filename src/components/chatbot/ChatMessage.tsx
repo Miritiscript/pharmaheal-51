@@ -22,7 +22,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false })
           message.isUser
             ? 'bg-primary text-primary-foreground rounded-t-xl rounded-bl-xl'
             : theme === 'dark' 
-              ? 'bg-dark-surface border border-dark-border text-foreground rounded-t-xl rounded-br-xl' 
+              ? 'bg-slate-800 border border-slate-700 text-slate-100 rounded-t-xl rounded-br-xl' 
               : 'glass rounded-t-xl rounded-br-xl'
         } p-3 shadow-sm`}
       >

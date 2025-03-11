@@ -60,30 +60,28 @@ const InstallPWA: React.FC = () => {
   if (!showInstallBanner || dismissed) return null;
 
   return (
-    <div className="fixed bottom-4 left-0 right-0 mx-auto w-11/12 max-w-md z-50">
-      <div className="glass-card p-4 rounded-lg shadow-lg border border-primary/20 flex items-center justify-between">
-        <div className="flex-1">
-          <h3 className="font-medium text-sm">Install PharmaHeal</h3>
-          <p className="text-xs text-muted-foreground">
-            Install our app for offline access and better performance
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="fixed top-16 left-0 right-0 mx-auto z-50 flex justify-center p-2">
+      <div className="glass-card p-2 rounded-lg shadow-lg flex items-center justify-between max-w-xs">
+        <p className="text-xs mr-2 text-foreground">
+          Install PharmaHeal for quick access! 
+        </p>
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={dismissInstallBanner}
+            className="h-7 w-7 p-0"
             aria-label="Dismiss"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
           <Button
             variant="default"
             size="sm"
             onClick={handleInstallClick}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 h-7 text-xs"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3 w-3" />
             Install
           </Button>
         </div>

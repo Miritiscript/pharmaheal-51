@@ -1,13 +1,13 @@
+
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ArrowLeft } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import SearchBar from '../search/SearchBar';
 import { ThemeToggle } from '../theme/ThemeToggle';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -21,26 +21,18 @@ const Navbar: React.FC = () => {
     return location.pathname === path;
   };
 
-  const showBackButton = location.pathname !== '/';
-
+  // Add search handler function
   const handleSearch = (query: string) => {
     console.log('Search query:', query);
+    // Implement search functionality here or navigate to search results page
+    // Example: navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
   return (
     <nav className="fixed top-0 w-full z-50 shadow-md backdrop-blur-lg bg-background/80 dark:bg-dark-surface/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex items-center space-x-4">
-            {showBackButton && (
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 text-muted-foreground hover:text-foreground rounded-full transition-colors"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-            )}
+          <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-2xl font-bold gradient-text">
                 PharmaHeal
@@ -102,7 +94,7 @@ const Navbar: React.FC = () => {
       </div>
 
       {isMenuOpen && (
-        <div className="sm:hidden absolute w-full bg-background/95 dark:bg-dark-surface/95 backdrop-blur-lg">
+        <div className="sm:hidden">
           <div className="pt-2 pb-3 space-y-1">
             <Link
               to="/"

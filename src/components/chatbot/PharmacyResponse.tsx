@@ -39,7 +39,7 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
             <Pill className="w-4 h-4" />
             <h3>2️⃣ Drug Recommendations</h3>
           </div>
-          <div className="pl-6 text-sm whitespace-pre-line">{drugRecommendations.replace(/•/g, '💊 ')}</div>
+          <div className="pl-6 text-sm whitespace-pre-line">{drugRecommendations}</div>
         </div>
       )}
       

@@ -4,24 +4,24 @@ import React from 'react';
 const PharmacyImagesGrid: React.FC = () => {
   const pharmacyImages = [
     {
-      url: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-      alt: "Variety of medication tablets and pills",
-      caption: "Prescription medications and treatments"
+      url: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+      alt: "Blood glucose monitoring for diabetes management",
+      caption: "Diabetes care & monitoring"
     },
     {
-      url: "https://images.unsplash.com/photo-1631549916768-4119b4220039?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-      alt: "Medical syringes and vials",
-      caption: "Injectable medications and vaccines"
+      url: "https://images.unsplash.com/photo-1493770348161-369560ae357d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+      alt: "Healthy fruits and vegetables for nutrition",
+      caption: "Nutrition & balanced diet"
     },
     {
-      url: "https://images.unsplash.com/photo-1585435557343-3b348031e799?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-      alt: "Pharmacist reviewing medication",
-      caption: "Expert pharmaceutical care"
+      url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+      alt: "Blood pressure monitoring for hypertension",
+      caption: "Hypertension monitoring"
     },
     {
-      url: "https://images.unsplash.com/photo-1587854680352-936b22b91030?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-      alt: "Colorful medication pills",
-      caption: "Advanced pharmaceutical treatments"
+      url: "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+      alt: "Herbal medicine and natural remedies",
+      caption: "Herbal medicine & wellness"
     }
   ];
 

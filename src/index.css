@@ -64,6 +64,10 @@
     --border: 217 33% 18%;
     --input: 217 33% 18%;
     --ring: 324 80% 60%;
+    
+    /* Dark mode specific variables */
+    --dark-surface: 0 0% 10%; /* #191919 for card backgrounds */
+    --dark-border: 0 0% 15%; /* #262626 for borders */
   }
 }
 

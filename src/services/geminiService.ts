@@ -7,6 +7,7 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemi
 export interface GeminiResponse {
   text: string;
   categories?: {
+    diseaseDescription?: string;
     drugRecommendations?: string;
     sideEffects?: string;
     contraindications?: string;
@@ -23,19 +24,22 @@ Provide accurate, comprehensive, and helpful information about the following que
 
 Format your response with the following sections, using bullet points for each item (not paragraphs):
 
-1. DRUG RECOMMENDATIONS: List effective medications with proper dosage guidelines
+1. DISEASE DESCRIPTION: Provide key details in point form on the cause, nature, and background of the disease/condition
+   Format each point as: "• Key information about the disease/condition"
+
+2. DRUG RECOMMENDATIONS: List effective medications with proper dosage guidelines
    Format each recommendation as: "• Drug name – Recommended dosage"
 
-2. SIDE EFFECTS & INDICATIONS: Warnings on potential side effects and drug use cases
+3. SIDE EFFECTS & INDICATIONS: Warnings on potential side effects and drug use cases
    Format each item as: "• Main side effect/indication"
 
-3. CONTRAINDICATIONS & INTERACTIONS: Medical conditions, allergies, or drug interactions to be aware of
+4. CONTRAINDICATIONS & INTERACTIONS: Medical conditions, allergies, or drug interactions to be aware of
    Format each item as: "• Contraindication/interaction"
 
-4. HERBAL MEDICINE ALTERNATIVES: Scientifically supported natural remedies if applicable
+5. HERBAL MEDICINE ALTERNATIVES: Scientifically supported natural remedies if applicable
    Format each item as: "• Herbal alternative - usage/dosage"
 
-5. FOOD-BASED TREATMENTS: Nutritional guidance and dietary recommendations
+6. FOOD-BASED TREATMENTS: Nutritional guidance and dietary recommendations
    Format each item as: "• Food item - benefit"
    THIS SECTION IS REQUIRED - Always include food-based treatments that may help with the condition
    
@@ -96,12 +100,14 @@ const parseCategories = (text: string): GeminiResponse["categories"] => {
   const categories: GeminiResponse["categories"] = {};
   
   // Extract sections based on headers
+  const diseaseDescriptionMatch = text.match(/DISEASE DESCRIPTION:?([\s\S]*?)(?=DRUG RECOMMENDATIONS|$)/i);
   const drugRecommendationsMatch = text.match(/DRUG RECOMMENDATIONS:?([\s\S]*?)(?=SIDE EFFECTS|$)/i);
   const sideEffectsMatch = text.match(/SIDE EFFECTS[^:]*:?([\s\S]*?)(?=CONTRAINDICATIONS|$)/i);
   const contraindicationsMatch = text.match(/CONTRAINDICATIONS[^:]*:?([\s\S]*?)(?=HERBAL MEDICINE|$)/i);
   const herbalAlternativesMatch = text.match(/HERBAL MEDICINE[^:]*:?([\s\S]*?)(?=FOOD-BASED|$)/i);
   const foodBasedTreatmentsMatch = text.match(/FOOD-BASED TREATMENTS:?([\s\S]*?)(?=\n\n|$)/i);
   
+  if (diseaseDescriptionMatch?.[1]) categories.diseaseDescription = diseaseDescriptionMatch[1].trim();
   if (drugRecommendationsMatch?.[1]) categories.drugRecommendations = drugRecommendationsMatch[1].trim();
   if (sideEffectsMatch?.[1]) categories.sideEffects = sideEffectsMatch[1].trim();
   if (contraindicationsMatch?.[1]) categories.contraindications = contraindicationsMatch[1].trim();

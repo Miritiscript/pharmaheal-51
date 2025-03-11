@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
-import { Send, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import SuggestedPrompt from './SuggestedPrompt';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -11,11 +12,101 @@ interface ChatInputProps {
 
 const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const { toast } = useToast();
+  
+  // Check if browser supports speech recognition
+  const browserSupportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  
+  let recognition: SpeechRecognition | null = null;
+  
+  useEffect(() => {
+    // Initialize speech recognition
+    if (browserSupportsSpeech) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      
+      recognition.onresult = (event) => {
+        const current = event.resultIndex;
+        const result = event.results[current];
+        const transcriptText = result[0].transcript;
+        setTranscript(transcriptText);
+        
+        if (result.isFinal) {
+          setInput(transcriptText);
+          stopListening();
+        }
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        toast({
+          title: "Voice Input Error",
+          description: `Error: ${event.error}. Please try again.`,
+          variant: "destructive",
+        });
+        stopListening();
+      };
+    }
+    
+    // Clean up
+    return () => {
+      if (recognition) {
+        recognition.onresult = null;
+        recognition.onerror = null;
+        stopListening();
+      }
+    };
+  }, []);
+  
+  const startListening = () => {
+    if (!browserSupportsSpeech) {
+      toast({
+        title: "Voice Input Not Supported",
+        description: "Your browser doesn't support voice input. Please try a different browser.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (recognition) {
+      try {
+        recognition.start();
+        setIsListening(true);
+        setTranscript('');
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+      }
+    }
+  };
+  
+  const stopListening = () => {
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.error('Failed to stop speech recognition:', error);
+      }
+    }
+    setIsListening(false);
+  };
+  
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   const handleSend = () => {
     if (!input.trim()) return;
     onSendMessage(input);
     setInput('');
+    setTranscript('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -53,26 +144,48 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         ))}
       </div>
       <div className="relative">
+        {transcript && isListening && (
+          <div className="absolute -top-10 left-0 right-0 bg-background dark:bg-dark-surface p-2 rounded-lg border border-border text-sm animate-pulse">
+            {transcript}...
+          </div>
+        )}
         <textarea
           id="chat-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyPress}
-          placeholder="Ask about medications, side effects, or treatments..."
-          className="w-full p-3 pr-12 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary bg-background resize-none"
+          placeholder={isListening ? "Listening..." : "Ask about medications, side effects, or treatments..."}
+          className="w-full p-3 pr-24 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary bg-background resize-none"
           rows={1}
           disabled={isLoading}
         />
-        <Button
-          onClick={handleSend}
-          disabled={isLoading || !input.trim()}
-          className="absolute right-2 top-2 p-2"
-          variant="ghost"
-          size="icon"
-          aria-label="Send message"
-        >
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-        </Button>
+        <div className="absolute right-2 top-2 flex space-x-1">
+          <Button
+            onClick={toggleListening}
+            disabled={isLoading}
+            className={`p-2 ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-secondary hover:bg-secondary/90'}`}
+            variant="ghost"
+            size="icon"
+            aria-label={isListening ? "Stop recording" : "Start voice input"}
+            type="button"
+          >
+            {isListening ? 
+              <MicOff className="w-5 h-5 text-white" /> : 
+              <Mic className="w-5 h-5" />
+            }
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
+            className="p-2"
+            variant="ghost"
+            size="icon"
+            aria-label="Send message"
+            type="button"
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          </Button>
+        </div>
       </div>
       <div className="flex items-center mt-2 text-xs text-muted-foreground">
         <AlertCircle className="w-3 h-3 mr-1" />

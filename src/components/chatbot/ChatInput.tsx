@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import SuggestedPrompt from './SuggestedPrompt';
@@ -19,44 +19,46 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   // Check if browser supports speech recognition
   const browserSupportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
   
-  let recognition: SpeechRecognition | null = null;
+  // Using a ref for the recognition instance to maintain it between renders
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   
   useEffect(() => {
     // Initialize speech recognition
     if (browserSupportsSpeech) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognitionConstructor();
       
-      recognition.onresult = (event) => {
-        const current = event.resultIndex;
-        const result = event.results[current];
-        const transcriptText = result[0].transcript;
-        setTranscript(transcriptText);
+      if (recognitionRef.current) {
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
         
-        if (result.isFinal) {
-          setInput(transcriptText);
+        recognitionRef.current.onresult = (event) => {
+          const current = event.resultIndex;
+          const result = event.results[current];
+          const transcriptText = result[0].transcript;
+          setTranscript(transcriptText);
+          
+          if (result.isFinal) {
+            setInput(transcriptText);
+            stopListening();
+          }
+        };
+        
+        recognitionRef.current.onerror = (event) => {
+          console.error('Speech recognition error', event.error);
+          toast({
+            title: "Voice Input Error",
+            description: `Error: ${event.error}. Please try again.`,
+            variant: "destructive",
+          });
           stopListening();
-        }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
-        toast({
-          title: "Voice Input Error",
-          description: `Error: ${event.error}. Please try again.`,
-          variant: "destructive",
-        });
-        stopListening();
-      };
+        };
+      }
     }
     
     // Clean up
     return () => {
-      if (recognition) {
-        recognition.onresult = null;
-        recognition.onerror = null;
+      if (recognitionRef.current) {
         stopListening();
       }
     };
@@ -72,9 +74,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       return;
     }
     
-    if (recognition) {
+    if (recognitionRef.current) {
       try {
-        recognition.start();
+        recognitionRef.current.start();
         setIsListening(true);
         setTranscript('');
       } catch (error) {
@@ -84,9 +86,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   };
   
   const stopListening = () => {
-    if (recognition) {
+    if (recognitionRef.current) {
       try {
-        recognition.stop();
+        recognitionRef.current.stop();
       } catch (error) {
         console.error('Failed to stop speech recognition:', error);
       }

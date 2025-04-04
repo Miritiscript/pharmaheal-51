@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import SuggestedPrompt from './SuggestedPrompt';
 import { useToast } from '@/hooks/use-toast';
+import { commonDiseases } from '@/data/diseasesList';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -14,6 +15,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionBoxRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
   // Check if browser supports speech recognition
@@ -62,6 +66,35 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     };
   }, []);
   
+  // Filter disease suggestions based on input
+  useEffect(() => {
+    if (input.length > 1) {
+      const filtered = commonDiseases.filter(disease => 
+        disease.toLowerCase().includes(input.toLowerCase())
+      ).slice(0, 5); // Limit to 5 suggestions
+      
+      setFilteredSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setFilteredSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [input]);
+  
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
   const startListening = () => {
     if (!browserSupportsSpeech) {
       toast({
@@ -103,10 +136,19 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   };
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim()) {
+      toast({
+        title: "Empty Input",
+        description: "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     onSendMessage(input);
     setInput('');
     setTranscript('');
+    setShowSuggestions(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -118,6 +160,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
 
   const handleSuggestionClick = (text: string) => {
     setInput(text);
+    setShowSuggestions(false);
     // Focus the input after setting the suggestion
     setTimeout(() => {
       document.getElementById('chat-input')?.focus();
@@ -159,6 +202,25 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
           rows={1}
           disabled={isLoading}
         />
+        
+        {/* Disease suggestions dropdown */}
+        {showSuggestions && (
+          <div 
+            ref={suggestionBoxRef}
+            className="absolute top-full left-0 right-0 bg-background dark:bg-slate-800 border border-border rounded-lg mt-1 shadow-lg z-10 max-h-60 overflow-y-auto"
+          >
+            {filteredSuggestions.map((disease, index) => (
+              <div 
+                key={index}
+                className="px-4 py-2 hover:bg-accent cursor-pointer"
+                onClick={() => handleSuggestionClick(disease)}
+              >
+                {disease}
+              </div>
+            ))}
+          </div>
+        )}
+        
         <div className="absolute right-2 top-2 flex space-x-1">
           <Button
             onClick={toggleListening}

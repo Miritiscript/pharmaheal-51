@@ -1,8 +1,8 @@
 
 // A service to interact with Google's Gemini API
 
-const GEMINI_API_KEY = "AIzaSyD1qnDdRGGrwWmZp9Fp_pz1NYEFnhkcsMo";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+const GEMINI_API_KEY = "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
 
 export interface GeminiResponse {
   text: string;
@@ -17,6 +17,10 @@ export interface GeminiResponse {
 }
 
 export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
+  if (!query.trim()) {
+    throw new Error("Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.");
+  }
+  
   try {
     const prompt = `
 You are an AI pharmacy assistant providing information about medications, treatments, and health conditions. 
@@ -41,7 +45,8 @@ Format your response with the following sections, using bullet points for each i
 
 6. FOOD-BASED TREATMENTS: Nutritional guidance and dietary recommendations
    Format each item as: "• Food item - benefit"
-   THIS SECTION IS REQUIRED - Always include food-based treatments that may help with the condition
+   
+   IF NO FOOD-BASED TREATMENTS EXIST for this condition, clearly state: "• No scientifically-backed food-based treatments found for this condition."
    
 All information should be presented in bullet point format (•) for easy reading, never in paragraphs.
 Each section should have at least 3-5 bullet points with brief, concise information.

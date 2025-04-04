@@ -100,7 +100,14 @@ const ChatInterface: React.FC = () => {
   }, [messages, currentChatId]);
 
   const handleSendMessage = async (input: string) => {
-    if (!input.trim()) return;
+    if (!input.trim()) {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -127,21 +134,26 @@ const ChatInterface: React.FC = () => {
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       console.error('Error getting pharmacy response:', error);
-      toast({
-        title: "Error",
-        description: "Failed to get a response. Please try again later.",
-        variant: "destructive",
-      });
       
-      // Add error message to chat
+      // Add error message to chat with specific guidance
       const errorMessage: Message = {
         id: uuidv4(),
-        content: "I'm sorry, I couldn't process your request at the moment. Please try again later.",
+        content: error instanceof Error 
+          ? error.message 
+          : "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.",
         isUser: false,
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, errorMessage]);
+      
+      toast({
+        title: "Error",
+        description: error instanceof Error 
+          ? error.message 
+          : "Failed to get a response. Please try again with a valid medical query.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

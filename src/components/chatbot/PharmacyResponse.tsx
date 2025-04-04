@@ -21,6 +21,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
     foodBasedTreatments 
   } = response.categories;
 
+  // Check if food-based treatments section contains the "No scientifically-backed" message
+  const noFoodTreatments = foodBasedTreatments?.includes("No scientifically-backed food-based treatments found for this condition");
+
   return (
     <div className="space-y-4">
       {diseaseDescription && (
@@ -79,7 +82,9 @@ const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
             <Apple className="w-4 h-4" />
             <h3>6️⃣ Food-Based Treatments</h3>
           </div>
-          <div className="pl-6 text-sm whitespace-pre-line">{foodBasedTreatments.replace(/•/g, '🍎 ')}</div>
+          <div className={`pl-6 text-sm whitespace-pre-line ${noFoodTreatments ? 'italic text-muted-foreground' : ''}`}>
+            {foodBasedTreatments.replace(/•/g, noFoodTreatments ? '❗ ' : '🍎 ')}
+          </div>
         </div>
       )}
       

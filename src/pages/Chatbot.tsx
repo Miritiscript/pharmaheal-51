@@ -4,6 +4,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ChatInterface from '@/components/chatbot/ChatInterface';
 import TrustedInformationSources from '@/components/chatbot/TrustedInformationSources';
+import PageNavigation from '@/components/navigation/PageNavigation';
 
 const Chatbot: React.FC = () => {
   return (
@@ -20,6 +21,7 @@ const Chatbot: React.FC = () => {
               Your chat history is saved automatically. Clear conversations using the reset button.
             </p>
           </div>
+          <PageNavigation />
           <ChatInterface />
           <TrustedInformationSources />
         </div>

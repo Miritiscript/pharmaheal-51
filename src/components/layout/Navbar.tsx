@@ -34,8 +34,15 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-2xl font-bold gradient-text">
-                PharmaHeal
+              <Link to="/" className="flex items-center gap-2">
+                <img 
+                  src="/logo-icon.png" 
+                  alt="PharmaHeal Logo" 
+                  className="h-8 w-8"
+                />
+                <span className="text-2xl font-bold gradient-text hidden sm:inline-block">
+                  PharmaHeal
+                </span>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

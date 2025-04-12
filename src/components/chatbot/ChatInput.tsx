@@ -17,51 +17,71 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const [transcript, setTranscript] = useState('');
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const suggestionBoxRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
   
   // Check if browser supports speech recognition
   const browserSupportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
   
-  let recognition: SpeechRecognition | null = null;
-  
   useEffect(() => {
     // Initialize speech recognition
     if (browserSupportsSpeech) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      recognitionRef.current = new SpeechRecognition();
       
-      recognition.onresult = (event) => {
-        const current = event.resultIndex;
-        const result = event.results[current];
-        const transcriptText = result[0].transcript;
-        setTranscript(transcriptText);
+      if (recognitionRef.current) {
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
         
-        if (result.isFinal) {
-          setInput(transcriptText);
+        recognitionRef.current.onresult = (event) => {
+          const current = event.resultIndex;
+          const result = event.results[current];
+          const transcriptText = result[0].transcript;
+          setTranscript(transcriptText);
+          
+          if (result.isFinal) {
+            setInput(transcriptText);
+            stopListening();
+          }
+        };
+        
+        recognitionRef.current.onerror = (event) => {
+          console.error('Speech recognition error', event.error);
+          
+          if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+            setPermissionDenied(true);
+            toast({
+              title: "Microphone Access Denied",
+              description: "Please enable microphone access in your browser settings to use voice input.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Voice Input Error",
+              description: `Error: ${event.error}. Please try again.`,
+              variant: "destructive",
+            });
+          }
+          
           stopListening();
-        }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
-        toast({
-          title: "Voice Input Error",
-          description: `Error: ${event.error}. Please try again.`,
-          variant: "destructive",
-        });
-        stopListening();
-      };
+        };
+        
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
     }
     
     // Clean up
     return () => {
-      if (recognition) {
-        recognition.onresult = null;
-        recognition.onerror = null;
-        stopListening();
+      stopListening();
+      if (recognitionRef.current) {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
       }
     };
   }, []);
@@ -99,27 +119,47 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     if (!browserSupportsSpeech) {
       toast({
         title: "Voice Input Not Supported",
-        description: "Your browser doesn't support voice input. Please try a different browser.",
+        description: "Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.",
         variant: "destructive",
       });
       return;
     }
     
-    if (recognition) {
+    if (permissionDenied) {
+      toast({
+        title: "Microphone Access Denied",
+        description: "Please enable microphone access in your browser settings to use voice input.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (recognitionRef.current) {
       try {
-        recognition.start();
-        setIsListening(true);
+        // Reset the transcript
         setTranscript('');
+        recognitionRef.current.start();
+        setIsListening(true);
+        
+        toast({
+          title: "Listening...",
+          description: "Speak now. Voice input will automatically stop after you pause.",
+        });
       } catch (error) {
         console.error('Failed to start speech recognition:', error);
+        toast({
+          title: "Failed to start voice input",
+          description: "There was an error starting the microphone. Please try again.",
+          variant: "destructive",
+        });
       }
     }
   };
   
   const stopListening = () => {
-    if (recognition) {
+    if (recognitionRef.current) {
       try {
-        recognition.stop();
+        recognitionRef.current.stop();
       } catch (error) {
         console.error('Failed to stop speech recognition:', error);
       }

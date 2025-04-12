@@ -5,22 +5,16 @@ import Footer from '@/components/layout/Footer';
 import VideoHub from '@/components/videos/VideoHub';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { toast } from 'sonner';
-import { preloadImages, FALLBACK_IMAGES, LOCAL_FALLBACK_IMAGES } from '@/utils/imageUtils';
+import { preloadImages, LOCAL_FALLBACK_IMAGES } from '@/utils/imageUtils';
 
 const Videos: React.FC = () => {
   const { theme } = useTheme();
   
-  // Add an effect to preload all fallback images
+  // Add an effect to preload only local fallback images
   useEffect(() => {
-    // Preload Unsplash fallbacks
-    preloadImages(FALLBACK_IMAGES);
-    
-    // Preload locally uploaded images as additional fallbacks
+    // Preload locally uploaded images as fallbacks
     preloadImages(LOCAL_FALLBACK_IMAGES);
-  }, []);
-  
-  // Add an error boundary effect
-  useEffect(() => {
+    
     // Handle unhandled promise rejections that might be related to image loading
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);

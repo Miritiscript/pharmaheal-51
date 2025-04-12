@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, Play, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
-import { getThumbnailUrl, validateVideoId } from '@/services/youtubeService';
+import { validateVideoId } from '@/services/youtubeService';
 import { 
-  FALLBACK_IMAGES, 
   LOCAL_FALLBACK_IMAGES, 
+  getBestYouTubeThumbnail,
   preloadImages 
 } from '@/utils/imageUtils';
 
@@ -24,15 +23,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
   
   // Preload fallback images to ensure they're in cache
   useEffect(() => {
-    preloadImages(FALLBACK_IMAGES);
     preloadImages(LOCAL_FALLBACK_IMAGES);
-    
-    // Preload related video thumbnails
-    if (relatedVideos?.length) {
-      const thumbnails = relatedVideos.map(v => v.thumbnail);
-      preloadImages(thumbnails);
-    }
-  }, [relatedVideos]);
+  }, []);
   
   const handleImageError = (videoId: string) => {
     console.warn(`Failed to load thumbnail for video: ${videoId}`);
@@ -44,7 +36,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
   
   // Function to get a fallback image based on video ID
   const getFallbackImage = (videoId: string) => {
-    // Try local fallbacks first
+    // Use local fallbacks
     const localIndex = Math.abs(videoId.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
@@ -71,8 +63,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
     }
     
     // For YouTube videos, ensure we're using the proper URL format
-    if (validateVideoId(video.videoId) && video.thumbnail.includes('youtube')) {
-      return getThumbnailUrl(video.videoId);
+    if (validateVideoId(video.videoId)) {
+      return getBestYouTubeThumbnail(video.videoId);
     }
     
     // Ensure we're using HTTPS not HTTP
@@ -99,7 +91,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
         <div className="relative pb-[56.25%] h-0">
           <iframe
             className="absolute top-0 left-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${video.videoId}?autoplay=1&start=0&end=60`}
+            src={`https://www.youtube.com/embed/${video.videoId}`}
             title={video.title}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

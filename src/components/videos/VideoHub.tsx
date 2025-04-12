@@ -12,6 +12,7 @@ import SearchBar from '../search/SearchBar';
 import { searchContent } from '@/services/searchService';
 import { Button } from '../ui/Button';
 import { Filter } from 'lucide-react';
+import { LOCAL_FALLBACK_IMAGES, preloadImages } from '@/utils/imageUtils';
 
 const VideoHub: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -27,21 +28,35 @@ const VideoHub: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const categoryParam = queryParams.get('category');
 
+  // Preload fallback images to ensure they're available
+  useEffect(() => {
+    preloadImages(LOCAL_FALLBACK_IMAGES);
+  }, []);
+
   useEffect(() => {
     const loadVideos = async () => {
       setIsLoading(true);
       try {
         // Always attempt to use live YouTube data first
         const fetchedCategories = await fetchVideoCategories();
-        setCategories(fetchedCategories);
-        setFilteredCategories(fetchedCategories);
-        toast.success("Videos loaded successfully");
+        
+        if (fetchedCategories && fetchedCategories.length > 0) {
+          setCategories(fetchedCategories);
+          setFilteredCategories(fetchedCategories);
+          toast.success("Videos loaded successfully");
+        } else {
+          // If no videos were returned, fallback to mock data
+          console.warn("No videos returned from API, using mock data");
+          setCategories(mockCategories);
+          setFilteredCategories(mockCategories);
+          toast.info("Using demo videos");
+        }
       } catch (error) {
         console.error("Error loading videos:", error);
         // Fallback to mock data already handled in service
         setCategories(mockCategories);
         setFilteredCategories(mockCategories);
-        toast.error("Couldn't load videos from YouTube, using cached data instead");
+        toast.error("Couldn't load live videos, using cached data instead");
       } finally {
         setIsLoading(false);
       }
@@ -62,9 +77,9 @@ const VideoHub: React.FC = () => {
       setActiveFilter(categoryParam);
       filterCategories(categoryParam);
     }
-  }, [categoryParam, isLoading]);
+  }, [categoryParam, isLoading, categories]);
 
-  // Handle search
+  // Handle search with debouncing
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     
@@ -78,15 +93,34 @@ const VideoHub: React.FC = () => {
       return;
     }
     
-    // Search through all videos
-    const results = searchContent(query, { videos: categories }).videos;
+    // Search through all videos, case insensitive
+    const lowerQuery = query.toLowerCase().trim();
+    const results = categories.flatMap(category => 
+      category.videos.filter(video => 
+        video.title.toLowerCase().includes(lowerQuery) || 
+        video.description?.toLowerCase().includes(lowerQuery) ||
+        video.category.toLowerCase().includes(lowerQuery)
+      )
+    );
     
     // Group search results by category
     const searchResultCategories: VideoCategory[] = [];
     
+    // Create a map to store videos by category
+    const videosByCategory = new Map<string, Video[]>();
+    
+    // Group videos by their category
+    results.forEach(video => {
+      if (!videosByCategory.has(video.category)) {
+        videosByCategory.set(video.category, []);
+      }
+      videosByCategory.get(video.category)?.push(video);
+    });
+    
+    // Convert the map to our category format
     categories.forEach(category => {
-      const categoryVideos = results.filter(video => video.category === category.title);
-      if (categoryVideos.length > 0) {
+      const categoryVideos = videosByCategory.get(category.title);
+      if (categoryVideos && categoryVideos.length > 0) {
         searchResultCategories.push({
           ...category,
           videos: categoryVideos
@@ -95,6 +129,16 @@ const VideoHub: React.FC = () => {
     });
     
     setFilteredCategories(searchResultCategories);
+    
+    // Provide feedback about search results
+    if (searchResultCategories.length === 0) {
+      toast.info(`No videos found matching "${query}"`);
+    } else {
+      const totalVideos = searchResultCategories.reduce(
+        (sum, category) => sum + category.videos.length, 0
+      );
+      toast.success(`Found ${totalVideos} videos matching "${query}"`);
+    }
   };
 
   const filterCategories = (filterId: string | null) => {
@@ -126,7 +170,7 @@ const VideoHub: React.FC = () => {
       .filter(v => v.id !== currentVideo.id && v.category !== currentVideo.category);
     
     // Combine them, prioritizing same category videos
-    return [...sameCategoryVideos, ...otherVideos];
+    return [...sameCategoryVideos, ...otherVideos].slice(0, 6);
   };
 
   const filterButtons = [

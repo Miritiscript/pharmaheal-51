@@ -1,10 +1,10 @@
 
-// Define common fallback images
+// Define common fallback images - stored locally to avoid Unsplash hotlink restrictions
 export const FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80",
-  "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=480&q=80",
-  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&q=80",
-  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=480&q=80"
+  "/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png",
+  "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
+  "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
+  "/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png"
 ];
 
 // Local uploaded images as additional fallbacks
@@ -17,17 +17,21 @@ export const LOCAL_FALLBACK_IMAGES = [
 
 // YouTube specific fallbacks
 export const YOUTUBE_FALLBACK_IMAGES = [
-  "https://img.youtube.com/vi/default/hqdefault.jpg",
-  "https://i.ytimg.com/vi/default/hqdefault.jpg"
+  "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
+  "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png"
 ];
 
-// Function to preload images to ensure they're in browser cache
+// Function to safely load images with fallbacks
 export const preloadImages = (imageSrcs: string[]): void => {
-  imageSrcs.forEach(src => {
+  // Only preload images that are local or absolutely essential
+  const filteredSrcs = imageSrcs.filter(src => {
+    // Only preload local images starting with "/" or essential ones
+    return src.startsWith('/') || src.includes('lovable-uploads');
+  });
+  
+  filteredSrcs.forEach(src => {
     const img = new Image();
     img.src = src;
-    img.onload = () => console.log(`Preloaded: ${src}`);
-    img.onerror = () => console.warn(`Failed to preload: ${src}`);
   });
 };
 
@@ -47,18 +51,33 @@ export const getFallbackImage = (key: string): string => {
 // Fix potentially broken YouTube thumbnail URLs
 export const fixYouTubeThumbnailUrl = (videoId: string): string => {
   if (!videoId) {
-    return getFallbackImage('default');
+    return FALLBACK_IMAGES[0];
   }
   
-  // Fixed approach: use various formats to maximize compatibility
-  // Try v2 format used in modern YouTube embed API
-  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  // Try multiple YouTube thumbnail formats to maximize compatibility
+  const formats = [
+    `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+    `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+    `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`
+  ];
+  
+  // Use a hash to select a consistent format for this video
+  const hashCode = videoId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  const index = Math.abs(hashCode) % formats.length;
+  
+  // Return a YouTube URL format that might work better
+  return formats[index];
 };
 
 // General purpose URL fixer for any image URL
 export const ensureSecureImageUrl = (url: string): string => {
   if (!url) {
-    return getFallbackImage('default');
+    return FALLBACK_IMAGES[0];
   }
   
   // If it's a relative URL, make it absolute
@@ -73,4 +92,14 @@ export const ensureSecureImageUrl = (url: string): string => {
   
   // Ensure we're using HTTPS
   return url.replace('http:', 'https:');
+};
+
+// Get the best thumbnail for a video ID based on available formats
+export const getBestYouTubeThumbnail = (videoId: string): string => {
+  if (!videoId || videoId === 'undefined' || videoId === 'null') {
+    return LOCAL_FALLBACK_IMAGES[0];
+  }
+  
+  // Try proxied or alternative format
+  return fixYouTubeThumbnailUrl(videoId);
 };

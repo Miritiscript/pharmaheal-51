@@ -3,11 +3,10 @@ import { Play, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video, VideoCategory } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
-import { getThumbnailUrl, validateVideoId } from '@/services/youtubeService';
+import { validateVideoId } from '@/services/youtubeService';
 import { 
-  getFallbackImage, 
-  FALLBACK_IMAGES, 
-  LOCAL_FALLBACK_IMAGES, 
+  getBestYouTubeThumbnail,
+  LOCAL_FALLBACK_IMAGES,
   preloadImages 
 } from '@/utils/imageUtils';
 
@@ -22,18 +21,11 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
   // Track which images have failed to load
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   
-  // Preload all fallback images to ensure they're in cache
+  // Preload all locally available images to ensure they're in cache
   useEffect(() => {
-    // Preload unsplash fallbacks
-    preloadImages(FALLBACK_IMAGES);
-    
     // Preload local fallbacks
     preloadImages(LOCAL_FALLBACK_IMAGES);
-    
-    // Preload for this category's videos
-    const videoThumbnails = category.videos.map(video => video.thumbnail);
-    preloadImages(videoThumbnails);
-  }, [category]);
+  }, []);
   
   const handleImageError = (videoId: string) => {
     console.warn(`Failed to load thumbnail for video: ${videoId}`);
@@ -47,7 +39,7 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
   const getBestThumbnailUrl = (video: Video): string => {
     // If image already failed, use fallback
     if (failedImages[video.videoId]) {
-      // Try a local fallback first
+      // Use a local fallback image
       const localIndex = Math.abs(video.videoId.split('').reduce((a, b) => {
         a = ((a << 5) - a) + b.charCodeAt(0);
         return a & a;
@@ -67,8 +59,8 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
     }
     
     // For YouTube videos, ensure we're using the proper URL format
-    if (validateVideoId(video.videoId) && video.thumbnail.includes('youtube')) {
-      return getThumbnailUrl(video.videoId);
+    if (validateVideoId(video.videoId)) {
+      return getBestYouTubeThumbnail(video.videoId);
     }
     
     // Ensure we're using HTTPS not HTTP

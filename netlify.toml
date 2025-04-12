@@ -27,3 +27,9 @@
     Cache-Control = "public, max-age=86400"
 
 # Brotli compression is automatically enabled on Netlify
+
+# Set CSP headers to match the meta tag in index.html
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://images.unsplash.com; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;"

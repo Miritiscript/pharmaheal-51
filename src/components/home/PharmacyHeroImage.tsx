@@ -6,7 +6,7 @@ const PharmacyHeroImage: React.FC = () => {
     <div className="relative w-full h-full overflow-hidden rounded-xl shadow-elevation-3">
       <div className="absolute inset-0 bg-gradient-to-br from-pharma-700/80 to-vibrant-pink-dark/50 z-10 mix-blend-multiply"></div>
       <img 
-        src="https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80" 
+        src="/assets/pharmacy-images/medicine-hero.jpg" 
         alt="Various medications, pills, and prescription drugs" 
         className="w-full h-full object-cover"
       />

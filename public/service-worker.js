@@ -1,7 +1,7 @@
 
 // Cache names
-const CACHE_NAME = 'pharmaheal-v2';
-const DATA_CACHE_NAME = 'pharmaheal-data-v2';
+const CACHE_NAME = 'pharmaheal-v3';
+const DATA_CACHE_NAME = 'pharmaheal-data-v3';
 
 // Files to cache
 const urlsToCache = [
@@ -43,7 +43,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - network-first strategy for assets and cached-first for other resources
+// Fetch event - network-first for images and assets
 self.addEventListener('fetch', (event) => {
   // Skip for browser extensions and chrome-extension requests
   if (
@@ -55,6 +55,30 @@ self.addEventListener('fetch', (event) => {
 
   const requestUrl = new URL(event.request.url);
   
+  // Handle image requests - network first
+  if (requestUrl.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp)$/) || 
+      requestUrl.hostname.includes('unsplash.com') ||
+      requestUrl.hostname.includes('ytimg.com')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Clone the response
+          const responseToCache = response.clone();
+          
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+            
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
   // JS module handling - network-first for all JS files
   if (requestUrl.pathname.endsWith('.js') || requestUrl.pathname.includes('assets/')) {
     event.respondWith(

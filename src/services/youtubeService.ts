@@ -7,6 +7,24 @@ const BASE_URL = "https://www.googleapis.com/youtube/v3";
 // Always try to use the API first
 let useYouTubeAPI = true;
 
+// Helper function to ensure thumbnail URLs always use HTTPS and append options
+export const getThumbnailUrl = (videoId: string): string => {
+  if (!videoId) {
+    console.warn("Invalid video ID provided for thumbnail");
+    return "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80";
+  }
+  
+  // Always use https protocol
+  // Use hqdefault.jpg directly from YouTube
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+};
+
+// Validate videoId to ensure it's in the correct format
+export const validateVideoId = (videoId: string): boolean => {
+  // YouTube video IDs are typically 11 characters
+  return Boolean(videoId && videoId.length >= 5 && videoId.length <= 20);
+};
+
 export const searchYouTubeVideos = async (query: string, maxResults = 8): Promise<YouTubeSearchResponse> => {
   if (!useYouTubeAPI) {
     console.log("Using mock data due to previous API errors");
@@ -24,8 +42,8 @@ export const searchYouTubeVideos = async (query: string, maxResults = 8): Promis
           title: video.title,
           description: video.description || "",
           thumbnails: {
-            high: { url: video.thumbnail },
-            medium: { url: video.thumbnail }
+            high: { url: getThumbnailUrl(video.videoId) },
+            medium: { url: getThumbnailUrl(video.videoId) }
           },
           channelTitle: "Health Channel",
           publishedAt: new Date().toISOString()
@@ -65,13 +83,6 @@ export const searchYouTubeVideos = async (query: string, maxResults = 8): Promis
     useYouTubeAPI = false;
     return searchYouTubeVideos(query, maxResults); // Retry with mock data
   }
-};
-
-// Helper function to ensure thumbnail URLs always use HTTPS and append options
-export const getThumbnailUrl = (videoId: string): string => {
-  // Never use http protocol, always https
-  // Add quality parameters to optimize loading
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 };
 
 export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {

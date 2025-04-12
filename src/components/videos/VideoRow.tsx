@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Video, VideoCategory } from '@/data/mockVideos';
+import { Video, VideoCategory, getFallbackImageByCategory } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
+import { getThumbnailUrl, validateVideoId } from '@/services/youtubeService';
 
 // Array of fallback images from Unsplash for different categories
 const FALLBACK_IMAGES = [
@@ -24,6 +24,14 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
   // Track which images have failed to load
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   
+  // Preload fallback images to ensure they're in cache
+  useEffect(() => {
+    FALLBACK_IMAGES.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+  
   const handleImageError = (videoId: string) => {
     setFailedImages(prev => ({
       ...prev,
@@ -43,6 +51,32 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
     // Use absolute value and modulo to get index
     const index = Math.abs(hashCode) % FALLBACK_IMAGES.length;
     return FALLBACK_IMAGES[index];
+  };
+  
+  // Function to get the best possible thumbnail URL
+  const getBestThumbnailUrl = (video: Video): string => {
+    // If image already failed, use fallback
+    if (failedImages[video.videoId]) {
+      return getFallbackImage(video.videoId);
+    }
+    
+    // If thumbnail doesn't start with https or http, it might be a relative path
+    if (!video.thumbnail.startsWith('http')) {
+      // Check if it's an absolute path
+      if (video.thumbnail.startsWith('/')) {
+        return video.thumbnail;
+      }
+      // Otherwise treat as a relative path
+      return `/${video.thumbnail}`;
+    }
+    
+    // For YouTube videos, ensure we're using the proper URL format
+    if (validateVideoId(video.videoId) && video.thumbnail.includes('youtube')) {
+      return getThumbnailUrl(video.videoId);
+    }
+    
+    // Ensure we're using HTTPS not HTTP
+    return video.thumbnail.replace('http:', 'https:');
   };
   
   return (
@@ -71,9 +105,7 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
           >
             <div className="relative aspect-video">
               <img 
-                src={failedImages[video.videoId] 
-                  ? getFallbackImage(video.videoId) 
-                  : video.thumbnail.replace('http:', 'https:')}
+                src={getBestThumbnailUrl(video)}
                 alt={`Thumbnail for ${video.title}`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"

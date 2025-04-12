@@ -15,6 +15,24 @@ export interface VideoCategory {
   videos: Video[];
 }
 
+// Fallback thumbnails for different categories
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&q=80",
+  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=480&q=80"
+];
+
+// Get fallback image by category or index
+export const getFallbackImageByCategory = (category: string): string => {
+  const index = Math.abs(category.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0) % FALLBACK_IMAGES.length);
+  
+  return FALLBACK_IMAGES[index];
+};
+
 export const mockCategories: VideoCategory[] = [
   {
     id: 'chronic',
@@ -137,27 +155,37 @@ export const convertYouTubeToVideos = (
   category: string
 ): Video[] => {
   return youtubeVideos.map((video) => {
-    // Get the thumbnail URL from the API response
-    let thumbnailUrl = video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium?.url;
-    
-    // Ensure we're using HTTPS for all thumbnails
-    if (thumbnailUrl && thumbnailUrl.startsWith('http:')) {
-      thumbnailUrl = thumbnailUrl.replace('http:', 'https:');
+    // Ensure videoId is valid
+    const videoId = video.id.videoId;
+    if (!videoId) {
+      console.warn("Missing videoId in YouTube response");
     }
     
-    // If we don't have a thumbnail URL from the API, construct one
-    if (!thumbnailUrl && video.id.videoId) {
-      thumbnailUrl = `https://img.youtube.com/vi/${video.id.videoId}/hqdefault.jpg`;
+    // Get a secure thumbnail URL
+    let thumbnailUrl = '';
+    
+    // First try to get it from the API response
+    if (video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.medium?.url) {
+      thumbnailUrl = (video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium?.url)
+        .replace('http:', 'https:'); // Always use HTTPS
+    } 
+    // If that fails, construct it from videoId
+    else if (videoId) {
+      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    } 
+    // If all else fails, use a category-based fallback
+    else {
+      thumbnailUrl = getFallbackImageByCategory(category);
     }
     
     return {
-      id: video.id.videoId,
+      id: videoId || `fallback-${Math.random().toString(36).substring(2, 9)}`,
       title: video.snippet.title,
       thumbnail: thumbnailUrl,
       duration: "Preview",
       category,
       description: video.snippet.description,
-      videoId: video.id.videoId,
+      videoId: videoId || "",
     };
   });
 };

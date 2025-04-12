@@ -1,9 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Play, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video, VideoCategory } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
+
+// Placeholder image from Unsplash for fallback
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80";
 
 interface VideoRowProps {
   category: VideoCategory;
@@ -12,6 +15,17 @@ interface VideoRowProps {
 
 const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
   const { theme } = useTheme();
+  
+  // Track which images have failed to load
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  
+  const handleImageError = (videoId: string) => {
+    setFailedImages(prev => ({
+      ...prev,
+      [videoId]: true
+    }));
+    console.warn(`Failed to load thumbnail for video: ${videoId}`);
+  };
   
   return (
     <div className="mb-8 transition-all duration-300 hover:translate-y-[-2px]">
@@ -39,10 +53,11 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
           >
             <div className="relative aspect-video">
               <img 
-                src={video.thumbnail} 
-                alt={video.title} 
+                src={failedImages[video.videoId] ? FALLBACK_IMAGE : video.thumbnail.replace('http:', 'https:')}
+                alt={`Thumbnail for ${video.title}`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"
+                onError={() => handleImageError(video.videoId)}
               />
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
                 <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform duration-300">

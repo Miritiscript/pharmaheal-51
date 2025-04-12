@@ -1,9 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ExternalLink, Play, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
+
+// Placeholder image from Unsplash for fallback
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=80";
 
 interface VideoPlayerProps {
   video: Video | null;
@@ -14,6 +17,15 @@ interface VideoPlayerProps {
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos, onVideoClick }) => {
   const { theme } = useTheme();
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  
+  const handleImageError = (videoId: string) => {
+    setFailedImages(prev => ({
+      ...prev,
+      [videoId]: true
+    }));
+    console.warn(`Failed to load thumbnail for video: ${videoId}`);
+  };
   
   if (!video) return null;
 
@@ -74,10 +86,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
             >
               <div className="relative aspect-video">
                 <img 
-                  src={relVideo.thumbnail} 
-                  alt={relVideo.title} 
+                  src={failedImages[relVideo.videoId] ? FALLBACK_IMAGE : relVideo.thumbnail.replace('http:', 'https:')}
+                  alt={`Thumbnail for ${relVideo.title}`}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
+                  onError={() => handleImageError(relVideo.videoId)}
                 />
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
                   <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform duration-300">

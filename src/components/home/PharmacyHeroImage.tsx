@@ -11,17 +11,17 @@ import {
 const PharmacyHeroImage: React.FC = () => {
   const heroImages = [
     {
-      src: "/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png",
+      src: "/lovable-uploads/pharmaheal.png",
       alt: "PharmaHeal medical services",
       caption: "Quality healthcare for your needs"
     },
     {
-      src: "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
+      src: "/lovable-uploads/logo.png",
       alt: "Nutrition and wellness",
       caption: "Personalized nutrition and wellness guidance"
     },
     {
-      src: "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
+      src: "/lovable-uploads/favicon.png",
       alt: "Chronic disease management",
       caption: "Expert chronic disease management solutions"
     }

@@ -1,16 +1,16 @@
 
 // Cache names
-const CACHE_NAME = 'pharmaheal-v3';
-const DATA_CACHE_NAME = 'pharmaheal-data-v3';
+const CACHE_NAME = 'pharmaheal-v4';
+const DATA_CACHE_NAME = 'pharmaheal-data-v4';
 
 // Files to cache
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo-icon.png',
-  '/logo-full.png',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/lovable-uploads/logo.png',
+  '/lovable-uploads/favicon.png'
 ];
 
 // Install event - caches static assets
@@ -58,7 +58,8 @@ self.addEventListener('fetch', (event) => {
   // Handle image requests - network first
   if (requestUrl.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp)$/) || 
       requestUrl.hostname.includes('unsplash.com') ||
-      requestUrl.hostname.includes('ytimg.com')) {
+      requestUrl.hostname.includes('ytimg.com') ||
+      requestUrl.pathname.includes('lovable-uploads')) {
     event.respondWith(
       fetch(event.request)
         .then(response => {

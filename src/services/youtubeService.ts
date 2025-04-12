@@ -1,22 +1,26 @@
 
 import { YouTubeSearchResponse, convertYouTubeToVideos, VideoCategory, mockCategories } from "@/data/mockVideos";
-import { fixYouTubeThumbnailUrl, getFallbackImage } from "@/utils/imageUtils";
+import { fixYouTubeThumbnailUrl, getFallbackImage, LOCAL_FALLBACK_IMAGES } from "@/utils/imageUtils";
+import { toast } from "sonner";
 
-const API_KEY = "AIzaSyDL6bYbpjR_wWP5c-a5ubI4yTPtwcL_EVs";
-const BASE_URL = "https://www.googleapis.com/youtube/v3";
+// Always use mock data since YouTube API has quota issues
+const useYouTubeAPI = false;
 
-// Always try to use the API first
-let useYouTubeAPI = true;
-
-// Helper function to ensure thumbnail URLs always use HTTPS and append options
+// Helper function to ensure thumbnail URLs always use local images
 export const getThumbnailUrl = (videoId: string): string => {
   if (!videoId) {
     console.warn("Invalid video ID provided for thumbnail");
-    return getFallbackImage('default');
+    return LOCAL_FALLBACK_IMAGES[0];
   }
   
-  // Try multiple formats to maximize compatibility
-  return fixYouTubeThumbnailUrl(videoId);
+  // Get a local image using the videoId as a seed
+  const hashCode = videoId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  const index = Math.abs(hashCode) % LOCAL_FALLBACK_IMAGES.length;
+  return LOCAL_FALLBACK_IMAGES[index];
 };
 
 // Validate videoId to ensure it's in the correct format
@@ -26,117 +30,76 @@ export const validateVideoId = (videoId: string): boolean => {
 };
 
 export const searchYouTubeVideos = async (query: string, maxResults = 8): Promise<YouTubeSearchResponse> => {
-  if (!useYouTubeAPI) {
-    console.log("Using mock data due to previous API errors");
-    // Create a mock response based on query
-    const mockItems = mockCategories
-      .flatMap(cat => cat.videos)
-      .filter(video => 
-        video.title.toLowerCase().includes(query.toLowerCase()) || 
-        video.description?.toLowerCase().includes(query.toLowerCase())
-      )
-      .slice(0, maxResults)
-      .map(video => ({
-        id: { videoId: video.videoId },
-        snippet: {
-          title: video.title,
-          description: video.description || "",
-          thumbnails: {
-            high: { url: getThumbnailUrl(video.videoId) },
-            medium: { url: getThumbnailUrl(video.videoId) }
-          },
-          channelTitle: "Health Channel",
-          publishedAt: new Date().toISOString()
-        }
-      }));
-    
-    return { items: mockItems };
-  }
+  console.log("Using mock data due to YouTube API quota issues");
   
-  try {
-    const response = await fetch(
-      `${BASE_URL}/search?part=snippet&maxResults=${maxResults}&q=${encodeURIComponent(
-        query
-      )}&type=video&key=${API_KEY}`
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("YouTube API error:", errorData);
-      
-      // If we hit quota limit, switch to mock data for future requests
-      if (errorData.error?.errors?.some((e: any) => e.reason === "quotaExceeded")) {
-        console.warn("YouTube API quota exceeded, switching to mock data for future requests");
-        useYouTubeAPI = false;
-        return searchYouTubeVideos(query, maxResults); // Retry with mock data
+  // Create a mock response based on query
+  const mockItems = mockCategories
+    .flatMap(cat => cat.videos)
+    .filter(video => 
+      video.title.toLowerCase().includes(query.toLowerCase()) || 
+      video.description?.toLowerCase().includes(query.toLowerCase())
+    )
+    .slice(0, maxResults)
+    .map(video => ({
+      id: { videoId: video.videoId },
+      snippet: {
+        title: video.title,
+        description: video.description || "",
+        thumbnails: {
+          high: { url: getThumbnailUrl(video.videoId) },
+          medium: { url: getThumbnailUrl(video.videoId) }
+        },
+        channelTitle: "Health Channel",
+        publishedAt: new Date().toISOString()
       }
-      
-      throw new Error(`YouTube API error: ${response.status}`);
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching YouTube videos:", error);
-    
-    // Always fall back to mock data on error
-    console.warn("Falling back to mock data due to YouTube API error");
-    useYouTubeAPI = false;
-    return searchYouTubeVideos(query, maxResults); // Retry with mock data
-  }
+    }));
+  
+  return { items: mockItems };
 };
 
 export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   try {
-    // Always try to use the API first
-    if (useYouTubeAPI) {
-      console.log("Attempting to fetch live YouTube data");
-      
-      // Fetch chronic disease management videos
-      const diabetesResponse = await searchYouTubeVideos("diabetes management guide");
-      const heartDiseaseResponse = await searchYouTubeVideos("heart disease prevention");
-      
-      // Fetch nutrition & wellness videos
-      const nutritionResponse = await searchYouTubeVideos("healthy nutrition guide");
-      const wellnessResponse = await searchYouTubeVideos("wellness tips health");
-      
-      // Combine results into categories
-      const categories: VideoCategory[] = [
-        {
-          id: "chronic",
-          title: "Chronic Disease Management",
-          videos: [
-            ...convertYouTubeToVideos(diabetesResponse.items, "Chronic Disease Management"),
-            ...convertYouTubeToVideos(heartDiseaseResponse.items, "Chronic Disease Management"),
-          ],
-        },
-        {
-          id: "nutrition",
-          title: "Nutrition & Wellness",
-          videos: [
-            ...convertYouTubeToVideos(nutritionResponse.items, "Nutrition & Wellness"),
-            ...convertYouTubeToVideos(wellnessResponse.items, "Nutrition & Wellness"),
-          ],
-        },
-      ];
-      
-      return categories;
-    } else {
-      console.log("Using mock video categories due to previous API errors");
-      return mockCategories;
-    }
+    console.log("Using mock video categories due to YouTube API quota issues");
+    
+    // We're going to use the mock data but ensure all thumbnails are local files
+    const categoriesWithLocalImages = mockCategories.map(category => {
+      return {
+        ...category,
+        videos: category.videos.map(video => {
+          return {
+            ...video,
+            thumbnail: getThumbnailUrl(video.videoId)
+          };
+        })
+      };
+    });
+    
+    // Simulate a slight delay to show loading state
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    toast.success("Demo videos loaded successfully");
+    return categoriesWithLocalImages;
   } catch (error) {
     console.error("Failed to fetch video categories:", error);
-    console.warn("Falling back to mock categories due to error");
+    toast.error("Failed to load videos. Using cached data.");
     
-    // Mark the API as unavailable for future requests
-    useYouTubeAPI = false;
-    
-    // Return mock data on error
-    return mockCategories;
+    // Return mock data with local images on error
+    return mockCategories.map(category => {
+      return {
+        ...category,
+        videos: category.videos.map(video => {
+          return {
+            ...video,
+            thumbnail: getThumbnailUrl(video.videoId)
+          };
+        })
+      };
+    });
   }
 };
 
-// Function to control API usage (internal only)
+// Ensure export for control function
 export const setUseYouTubeAPI = (useAPI: boolean) => {
-  useYouTubeAPI = useAPI;
+  // This function is kept for backward compatibility but has no effect now
+  console.log("YouTube API is disabled due to quota issues");
 };

@@ -23,14 +23,16 @@ export const YOUTUBE_FALLBACK_IMAGES = [
 
 // Function to safely load images with fallbacks
 export const preloadImages = (imageSrcs: string[]): void => {
-  // Only preload images that are local or absolutely essential
+  // Only preload local images
   const filteredSrcs = imageSrcs.filter(src => {
-    // Only preload local images starting with "/" or essential ones
-    return src.startsWith('/') || src.includes('lovable-uploads');
+    // Only preload local images starting with "/" 
+    return src.startsWith('/');
   });
   
   filteredSrcs.forEach(src => {
     const img = new Image();
+    img.onload = () => console.log(`Preloaded: ${src}`);
+    img.onerror = (e) => console.error(`Failed to preload local image: ${src}`, e);
     img.src = src;
   });
 };
@@ -54,24 +56,14 @@ export const fixYouTubeThumbnailUrl = (videoId: string): string => {
     return FALLBACK_IMAGES[0];
   }
   
-  // Try multiple YouTube thumbnail formats to maximize compatibility
-  const formats = [
-    `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-    `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-    `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-    `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`
-  ];
-  
-  // Use a hash to select a consistent format for this video
+  // Always return a fallback image instead of trying YouTube URLs
   const hashCode = videoId.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
   
-  const index = Math.abs(hashCode) % formats.length;
-  
-  // Return a YouTube URL format that might work better
-  return formats[index];
+  const index = Math.abs(hashCode) % LOCAL_FALLBACK_IMAGES.length;
+  return LOCAL_FALLBACK_IMAGES[index];
 };
 
 // General purpose URL fixer for any image URL
@@ -80,18 +72,12 @@ export const ensureSecureImageUrl = (url: string): string => {
     return FALLBACK_IMAGES[0];
   }
   
-  // If it's a relative URL, make it absolute
-  if (url.startsWith('/')) {
-    return url;
+  // If it's not a local URL, return a fallback
+  if (!url.startsWith('/')) {
+    return FALLBACK_IMAGES[0];
   }
   
-  // If it doesn't start with http or https, assume it's relative
-  if (!url.startsWith('http')) {
-    return `/${url}`;
-  }
-  
-  // Ensure we're using HTTPS
-  return url.replace('http:', 'https:');
+  return url;
 };
 
 // Get the best thumbnail for a video ID based on available formats
@@ -100,6 +86,6 @@ export const getBestYouTubeThumbnail = (videoId: string): string => {
     return LOCAL_FALLBACK_IMAGES[0];
   }
   
-  // Try proxied or alternative format
+  // Simply return a fallback image instead of trying YouTube URLs
   return fixYouTubeThumbnailUrl(videoId);
 };

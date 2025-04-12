@@ -1,8 +1,8 @@
 
 // Cache names
-const CACHE_NAME = 'pharmaheal-v8';
-const DATA_CACHE_NAME = 'pharmaheal-data-v8';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v8';
+const CACHE_NAME = 'pharmaheal-v9';
+const DATA_CACHE_NAME = 'pharmaheal-data-v9';
+const IMAGE_CACHE_NAME = 'pharmaheal-images-v9';
 
 // Files to cache
 const urlsToCache = [
@@ -17,19 +17,12 @@ const urlsToCache = [
   '/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png'
 ];
 
-// Fallback images to pre-cache
+// Local fallback images to pre-cache
 const fallbackImages = [
-  'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80',
-  'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=480&q=80',
-  'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&q=80',
-  'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=480&q=80'
-];
-
-// YouTube fallback patterns to try
-const youtubePatterns = [
-  'https://img.youtube.com/vi/*/hqdefault.jpg',
-  'https://i.ytimg.com/vi/*/hqdefault.jpg',
-  'https://i.ytimg.com/vi/*/mqdefault.jpg'
+  '/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png',
+  '/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png',
+  '/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png',
+  '/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png'
 ];
 
 // Check if we're in development mode
@@ -119,30 +112,46 @@ if (isDev) {
     );
   });
 
-  // Special handler for YouTube and Unsplash image requests
+  // Fetch event handler - with improved error handling for cache operations
   self.addEventListener('fetch', (event) => {
+    // Skip non-GET requests and browser extensions
+    if (event.request.method !== 'GET' || 
+        event.request.url.startsWith('chrome-extension://')) {
+      return;
+    }
+    
     const requestUrl = new URL(event.request.url);
-
-    // Handle YouTube thumbnail requests with special care
-    if (requestUrl.hostname.includes('ytimg.com') || 
-        requestUrl.hostname.includes('youtube.com') || 
-        requestUrl.hostname === 'img.youtube.com' ||
-        requestUrl.hostname === 'i.ytimg.com') {
-      
+    
+    // For image requests - network first with cache fallback
+    if (requestUrl.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp)$/) || 
+        requestUrl.pathname.includes('lovable-uploads')) {
       event.respondWith(
-        // Try network first with no-cors
-        fetch(event.request, { mode: 'no-cors', credentials: 'omit' })
+        fetch(event.request)
           .then(response => {
-            // Clone and cache the response
+            // Clone the response
             const responseToCache = response.clone();
+            
             caches.open(IMAGE_CACHE_NAME)
               .then(cache => {
-                cache.put(event.request, responseToCache);
+                try {
+                  // Only cache same-origin or CORS-enabled responses
+                  if (response.url.startsWith(self.location.origin) || 
+                      response.headers.get('Access-Control-Allow-Origin')) {
+                    cache.put(event.request, responseToCache).catch(err => {
+                      console.warn('Cache put error:', err);
+                    });
+                  }
+                } catch (err) {
+                  console.warn('Cache error:', err);
+                }
+              })
+              .catch(err => {
+                console.warn('Cache open error:', err);
               });
+              
             return response;
           })
           .catch(() => {
-            // If network fails, try cache
             return caches.match(event.request)
               .then(cachedResponse => {
                 if (cachedResponse) {
@@ -162,7 +171,7 @@ if (isDev) {
                     }
                     
                     // Last resort - try to fetch the first fallback directly
-                    return fetch(fallbackImages[0], { mode: 'no-cors' })
+                    return fetch(fallbackImages[0])
                       .catch(() => {
                         return new Response('Failed to load image', {
                           status: 404,
@@ -171,48 +180,6 @@ if (isDev) {
                       });
                   });
               });
-          })
-      );
-      return;
-    }
-    
-    // Handle Unsplash image requests
-    if (requestUrl.hostname.includes('unsplash.com')) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            const responseToCache = response.clone();
-            caches.open(IMAGE_CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-            return response;
-          })
-          .catch(() => {
-            return caches.match(event.request);
-          })
-      );
-      return;
-    }
-
-    // For image requests - network first with cache fallback
-    if (requestUrl.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp)$/) || 
-        requestUrl.pathname.includes('lovable-uploads')) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            // Clone the response
-            const responseToCache = response.clone();
-            
-            caches.open(IMAGE_CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-              
-            return response;
-          })
-          .catch(() => {
-            return caches.match(event.request);
           })
       );
       return;
@@ -227,7 +194,16 @@ if (isDev) {
             
             caches.open(CACHE_NAME)
               .then(cache => {
-                cache.put(event.request, responseToCache);
+                try {
+                  cache.put(event.request, responseToCache).catch(err => {
+                    console.warn('Cache put error for JS/assets:', err);
+                  });
+                } catch (err) {
+                  console.warn('Cache error for JS/assets:', err);
+                }
+              })
+              .catch(err => {
+                console.warn('Cache open error for JS/assets:', err);
               });
               
             return response;
@@ -249,7 +225,16 @@ if (isDev) {
             
             caches.open(DATA_CACHE_NAME)
               .then((cache) => {
-                cache.put(event.request, responseToCache);
+                try {
+                  cache.put(event.request, responseToCache).catch(err => {
+                    console.warn('Cache put error for API:', err);
+                  });
+                } catch (err) {
+                  console.warn('Cache error for API:', err);
+                }
+              })
+              .catch(err => {
+                console.warn('Cache open error for API:', err);
               });
               
             return response;
@@ -279,7 +264,16 @@ if (isDev) {
               
               caches.open(CACHE_NAME)
                 .then((cache) => {
-                  cache.put(event.request, responseToCache);
+                  try {
+                    cache.put(event.request, responseToCache).catch(err => {
+                      console.warn('Cache put error for other resources:', err);
+                    });
+                  } catch (err) {
+                    console.warn('Cache error for other resources:', err);
+                  }
+                })
+                .catch(err => {
+                  console.warn('Cache open error for other resources:', err);
                 });
                 
               return response;

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import VideoHub from '@/components/videos/VideoHub';
@@ -9,11 +9,54 @@ import { preloadImages, LOCAL_FALLBACK_IMAGES } from '@/utils/imageUtils';
 
 const Videos: React.FC = () => {
   const { theme } = useTheme();
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
   
   // Add an effect to preload only local fallback images
   useEffect(() => {
+    // Log that we're starting preload
+    console.log("Starting image preload process");
+    
+    // Show a loading toast
+    toast.info("Loading video assets...");
+    
     // Preload locally uploaded images as fallbacks
-    preloadImages(LOCAL_FALLBACK_IMAGES);
+    try {
+      preloadImages(LOCAL_FALLBACK_IMAGES);
+      console.log("Preload image request sent for:", LOCAL_FALLBACK_IMAGES);
+      
+      // Manually verify each image loads
+      const verifyImages = LOCAL_FALLBACK_IMAGES.map(src => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            console.log(`Verified: ${src}`);
+            resolve(src);
+          };
+          img.onerror = (e) => {
+            console.error(`Failed to verify: ${src}`, e);
+            reject(e);
+          };
+          img.src = src;
+        });
+      });
+      
+      Promise.allSettled(verifyImages)
+        .then(results => {
+          const succeeded = results.filter(r => r.status === 'fulfilled').length;
+          console.log(`Preloaded ${succeeded} out of ${verifyImages.length} images`);
+          setImagesPreloaded(true);
+          
+          if (succeeded > 0) {
+            toast.success(`Image assets loaded successfully (${succeeded}/${verifyImages.length})`);
+          } else {
+            toast.error("Failed to preload image assets. Some videos may not display correctly.");
+          }
+        });
+    } catch (error) {
+      console.error("Image preloading error:", error);
+      toast.error("Error preloading images. Using fallbacks.");
+      setImagesPreloaded(true);
+    }
     
     // Handle unhandled promise rejections that might be related to image loading
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -30,6 +73,7 @@ const Videos: React.FC = () => {
       const target = event.target as HTMLElement;
       if (target && target.tagName === 'IMG') {
         console.warn('Image load error:', event);
+        toast.info("Some images couldn't load. Using local backups.");
       }
     };
     
@@ -42,10 +86,23 @@ const Videos: React.FC = () => {
   }, []);
   
   return (
-    <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark' : 'light'}`}>
+    <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark bg-gray-950' : 'light bg-white'}`}>
       <Navbar />
       <main className="flex-1 pt-24 pb-16">
-        <VideoHub />
+        {imagesPreloaded ? (
+          <VideoHub key="preloaded-video-hub" />
+        ) : (
+          <div className="container mx-auto px-4 text-center py-12">
+            <div className="animate-pulse space-y-4">
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
+              <div className="flex justify-center mt-6">
+                <div className="w-12 h-12 border-4 border-pharma-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300">Loading educational videos...</p>
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

@@ -15,21 +15,21 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache images
+# Cache images with a shorter duration to allow updates
 [[headers]]
   for = "/*.png"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=3600"
 
 [[headers]]
   for = "/*.jpg"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=3600"
 
 # Brotli compression is automatically enabled on Netlify
 
-# Set CSP headers to match the meta tag in index.html
+# Updated CSP headers to match the meta tag in index.html and ensure images load properly
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://images.unsplash.com /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;"

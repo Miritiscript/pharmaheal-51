@@ -4,9 +4,9 @@ import React from 'react';
 const PharmacyImagesGrid: React.FC = () => {
   const pharmacyImages = [
     {
-      url: "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
-      alt: "PharmaHeal medical services",
-      caption: "Expert healthcare"
+      url: "/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png",
+      alt: "PharmaHeal branding",
+      caption: "Quality healthcare"
     },
     {
       url: "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
@@ -19,9 +19,9 @@ const PharmacyImagesGrid: React.FC = () => {
       caption: "Personalized care"
     },
     {
-      url: "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
-      alt: "PharmaHeal branding",
-      caption: "Quality healthcare"
+      url: "/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png",
+      alt: "Wellness solutions",
+      caption: "Comprehensive wellness"
     }
   ];
 

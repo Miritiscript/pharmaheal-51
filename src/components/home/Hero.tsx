@@ -14,7 +14,7 @@ const Hero: React.FC = () => {
           <div className="text-left">
             <div className="flex items-center mb-4">
               <img 
-                src="/lovable-uploads/logo.png" 
+                src="/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png" 
                 alt="PharmaHeal Logo" 
                 className="h-10 w-10 mr-3"
               />

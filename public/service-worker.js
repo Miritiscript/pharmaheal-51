@@ -1,7 +1,7 @@
 
 // Cache names
-const CACHE_NAME = 'pharmaheal-v5';
-const DATA_CACHE_NAME = 'pharmaheal-data-v5';
+const CACHE_NAME = 'pharmaheal-v6';
+const DATA_CACHE_NAME = 'pharmaheal-data-v6';
 
 // Files to cache
 const urlsToCache = [
@@ -9,8 +9,10 @@ const urlsToCache = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/lovable-uploads/logo.png',
-  '/lovable-uploads/favicon.png'
+  // Use the UUIDs of the uploaded images
+  '/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png',
+  '/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png', 
+  '/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png'
 ];
 
 // Check if we're in development mode
@@ -30,7 +32,13 @@ if (isDev) {
 
   // Pass through all requests without caching in development
   self.addEventListener('fetch', (event) => {
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(event.request).catch(() => {
+      console.log('Fetch failed for:', event.request.url);
+      return new Response('Network error happened', {
+        status: 408,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }));
   });
   
   console.log('Service Worker running in development mode - caching disabled');
@@ -43,9 +51,21 @@ if (isDev) {
       caches.open(CACHE_NAME)
         .then((cache) => {
           console.log('Opened cache');
-          return cache.addAll(urlsToCache);
+          // Instead of cache.addAll which will fail completely if one resource fails,
+          // we'll try to cache each resource individually
+          return Promise.allSettled(
+            urlsToCache.map(url => 
+              cache.add(url).catch(err => {
+                console.warn(`Failed to cache ${url}: ${err.message}`);
+                return null;
+              })
+            )
+          );
         })
         .then(() => self.skipWaiting())
+        .catch(err => {
+          console.error('Service worker install failed:', err);
+        })
     );
   });
 
@@ -170,6 +190,14 @@ if (isDev) {
                 });
                 
               return response;
+            })
+            .catch(error => {
+              console.error('Fetch failed:', error);
+              // Return a default offline page or message
+              return new Response('You are offline and this resource is not cached.', {
+                status: 503,
+                headers: {'Content-Type': 'text/plain'}
+              });
             });
         })
     );

@@ -9,6 +9,8 @@ export interface Video {
   category: string;
   description?: string;
   videoId: string;
+  views?: string;
+  channelTitle?: string;
 }
 
 export interface VideoCategory {
@@ -136,6 +138,9 @@ export interface YouTubeVideo {
   contentDetails?: {
     duration: string;
   };
+  statistics?: {
+    viewCount: string;
+  };
 }
 
 export interface YouTubeSearchResponse {
@@ -155,17 +160,22 @@ export const convertYouTubeToVideos = (
       console.warn("Missing videoId in YouTube response");
     }
     
-    // Get a local fallback image
-    const thumbnailUrl = getFallbackImageByCategory(category);
+    // Get the best thumbnail URL
+    const thumbnailUrl = video.snippet.thumbnails?.high?.url || 
+                         video.snippet.thumbnails?.medium?.url ||
+                         fixYouTubeThumbnailUrl(videoId);
     
     return {
       id: videoId || `fallback-${Math.random().toString(36).substring(2, 9)}`,
       title: video.snippet.title,
       thumbnail: thumbnailUrl,
-      duration: "Preview",
+      duration: video.contentDetails?.duration || "Preview",
       category,
       description: video.snippet.description,
       videoId: videoId || "",
+      views: video.statistics?.viewCount,
+      channelTitle: video.snippet.channelTitle
     };
   });
 };
+

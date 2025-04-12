@@ -48,8 +48,22 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
       return LOCAL_FALLBACK_IMAGES[localIndex];
     }
     
+    // If it's a YouTube video ID, try to get the best thumbnail
+    if (validateVideoId(video.videoId)) {
+      // If custom thumbnail is already a YouTube URL, use it
+      if (video.thumbnail && (
+          video.thumbnail.includes('ytimg.com') || 
+          video.thumbnail.includes('youtube.com')
+      )) {
+        return video.thumbnail;
+      }
+      
+      // Otherwise, generate a proper YouTube thumbnail URL
+      return getBestYouTubeThumbnail(video.videoId);
+    }
+    
     // If thumbnail doesn't start with https or http, it might be a relative path
-    if (!video.thumbnail.startsWith('http')) {
+    if (video.thumbnail && !video.thumbnail.startsWith('http')) {
       // Check if it's an absolute path
       if (video.thumbnail.startsWith('/')) {
         return video.thumbnail;
@@ -58,13 +72,13 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
       return `/${video.thumbnail}`;
     }
     
-    // For YouTube videos, ensure we're using the proper URL format
-    if (validateVideoId(video.videoId)) {
-      return getBestYouTubeThumbnail(video.videoId);
+    // If all else fails, use a local fallback
+    if (!video.thumbnail) {
+      return LOCAL_FALLBACK_IMAGES[0];
     }
     
-    // Ensure we're using HTTPS not HTTP
-    return video.thumbnail.replace('http:', 'https:');
+    // Otherwise use the provided thumbnail
+    return video.thumbnail;
   };
   
   return (
@@ -110,7 +124,9 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
             </div>
             <div className="p-3">
               <h4 className="font-medium line-clamp-2 group-hover:text-primary transition-colors duration-300">{video.title}</h4>
-              <p className="text-xs text-muted-foreground mt-1">{video.category}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {video.channelTitle || video.category}
+              </p>
             </div>
           </div>
         ))}

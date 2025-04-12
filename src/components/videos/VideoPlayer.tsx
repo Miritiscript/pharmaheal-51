@@ -52,8 +52,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
       return getFallbackImage(video.videoId);
     }
     
+    // If it's a YouTube video ID, try to get the best thumbnail
+    if (validateVideoId(video.videoId)) {
+      // If custom thumbnail is already a YouTube URL, use it
+      if (video.thumbnail && (
+          video.thumbnail.includes('ytimg.com') || 
+          video.thumbnail.includes('youtube.com')
+      )) {
+        return video.thumbnail;
+      }
+      
+      // Otherwise, generate a proper YouTube thumbnail URL
+      return getBestYouTubeThumbnail(video.videoId);
+    }
+    
     // If thumbnail doesn't start with https or http, it might be a relative path
-    if (!video.thumbnail.startsWith('http')) {
+    if (video.thumbnail && !video.thumbnail.startsWith('http')) {
       // Check if it's an absolute path
       if (video.thumbnail.startsWith('/')) {
         return video.thumbnail;
@@ -62,13 +76,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
       return `/${video.thumbnail}`;
     }
     
-    // For YouTube videos, ensure we're using the proper URL format
-    if (validateVideoId(video.videoId)) {
-      return getBestYouTubeThumbnail(video.videoId);
+    // If all else fails, use a local fallback
+    if (!video.thumbnail) {
+      return LOCAL_FALLBACK_IMAGES[0];
     }
     
-    // Ensure we're using HTTPS not HTTP
-    return video.thumbnail.replace('http:', 'https:');
+    // Otherwise use the provided thumbnail
+    return video.thumbnail;
   };
   
   if (!video) return null;
@@ -102,7 +116,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
           <h2 className={`text-xl font-semibold mb-2 ${
             theme === 'dark' ? 'text-white' : ''
           }`}>{video.title}</h2>
-          <p className="text-sm text-muted-foreground">{video.category} • {video.duration}</p>
+          <p className="text-sm text-muted-foreground">
+            {video.channelTitle || video.category} • {video.duration}
+            {video.views && ` • ${parseInt(video.views).toLocaleString()} views`}
+          </p>
           <div className="mt-4 text-sm">
             <p>{video.description || "This video provides educational information about health topics. Watch the full video on YouTube for complete information."}</p>
             <Button 
@@ -147,7 +164,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
               </div>
               <div className="p-3">
                 <h4 className="font-medium line-clamp-2 group-hover:text-primary transition-colors duration-300">{relVideo.title}</h4>
-                <p className="text-xs text-muted-foreground mt-1">{relVideo.category}</p>
+                <p className="text-xs text-muted-foreground mt-1">{relVideo.channelTitle || relVideo.category}</p>
               </div>
             </div>
           ))}

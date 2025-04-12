@@ -1,8 +1,7 @@
-
 // Cache names
-const CACHE_NAME = 'pharmaheal-v9';
-const DATA_CACHE_NAME = 'pharmaheal-data-v9';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v9';
+const CACHE_NAME = 'pharmaheal-v10';
+const DATA_CACHE_NAME = 'pharmaheal-data-v10';
+const IMAGE_CACHE_NAME = 'pharmaheal-images-v10';
 
 // Files to cache
 const urlsToCache = [
@@ -112,7 +111,7 @@ if (isDev) {
     );
   });
 
-  // Fetch event handler - with improved error handling for cache operations
+  // Fetch event handler - with improved handling for YouTube content
   self.addEventListener('fetch', (event) => {
     // Skip non-GET requests and browser extensions
     if (event.request.method !== 'GET' || 
@@ -121,6 +120,77 @@ if (isDev) {
     }
     
     const requestUrl = new URL(event.request.url);
+    
+    // For YouTube API requests - network only, don't cache
+    if (requestUrl.href.includes('googleapis.com/youtube')) {
+      event.respondWith(
+        fetch(event.request)
+          .catch(error => {
+            console.error('YouTube API fetch failed:', error);
+            return new Response(JSON.stringify({ 
+              error: { message: 'Failed to connect to YouTube API' } 
+            }), {
+              status: 503,
+              headers: {'Content-Type': 'application/json'}
+            });
+          })
+      );
+      return;
+    }
+    
+    // For YouTube thumbnail images - network with cache fallback
+    if (requestUrl.href.includes('ytimg.com') || 
+        (requestUrl.href.includes('youtube.com') && !requestUrl.href.includes('embed'))) {
+      event.respondWith(
+        fetch(event.request)
+          .then(response => {
+            // Clone the response for caching
+            const responseToCache = response.clone();
+            
+            // Cache the YouTube image
+            caches.open(IMAGE_CACHE_NAME)
+              .then(cache => {
+                try {
+                  cache.put(event.request, responseToCache).catch(err => {
+                    console.warn('YouTube image cache error:', err);
+                  });
+                } catch (err) {
+                  console.warn('YouTube image cache error:', err);
+                }
+              });
+              
+            return response;
+          })
+          .catch(() => {
+            // If network fails, try cache
+            return caches.match(event.request)
+              .then(cachedResponse => {
+                if (cachedResponse) {
+                  return cachedResponse;
+                }
+                
+                // If no cache hit, return a random fallback image
+                return caches.open(IMAGE_CACHE_NAME)
+                  .then(cache => {
+                    const fallbackUrl = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+                    return cache.match(new Request(fallbackUrl));
+                  })
+                  .then(fallbackResponse => {
+                    if (fallbackResponse) {
+                      return fallbackResponse;
+                    }
+                    
+                    // Last resort - return a response with placeholder text
+                    return new Response('Image not available', {
+                      status: 404,
+                      headers: {'Content-Type': 'text/plain'}
+                    });
+                  });
+              });
+          })
+      );
+      return;
+    }
     
     // For image requests - network first with cache fallback
     if (requestUrl.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp)$/) || 
@@ -216,8 +286,7 @@ if (isDev) {
     }
 
     // For API or data requests - network first with cache fallback
-    if (event.request.url.includes('/api/') || 
-        event.request.url.includes('googleapis.com')) {
+    if (event.request.url.includes('/api/')) {
       event.respondWith(
         fetch(event.request)
           .then((response) => {

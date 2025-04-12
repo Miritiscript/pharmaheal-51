@@ -56,14 +56,23 @@ export const fixYouTubeThumbnailUrl = (videoId: string): string => {
     return FALLBACK_IMAGES[0];
   }
   
-  // Always return a fallback image instead of trying YouTube URLs
-  const hashCode = videoId.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  
-  const index = Math.abs(hashCode) % LOCAL_FALLBACK_IMAGES.length;
-  return LOCAL_FALLBACK_IMAGES[index];
+  try {
+    // Try to construct a valid YouTube thumbnail URL
+    const ytThumbnailUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+    
+    // Return the YouTube thumbnail URL first, with local fallback in the component's onError
+    return ytThumbnailUrl;
+  } catch (error) {
+    console.error("Error creating YouTube thumbnail URL:", error);
+    // Get a local fallback image as backup
+    const hashCode = videoId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    const index = Math.abs(hashCode) % LOCAL_FALLBACK_IMAGES.length;
+    return LOCAL_FALLBACK_IMAGES[index];
+  }
 };
 
 // General purpose URL fixer for any image URL
@@ -72,9 +81,22 @@ export const ensureSecureImageUrl = (url: string): string => {
     return FALLBACK_IMAGES[0];
   }
   
-  // If it's not a local URL, return a fallback
+  // If it's a YouTube image URL
+  if (url.includes('ytimg.com') || url.includes('youtube.com')) {
+    return url; // YouTube URLs are already HTTPS
+  }
+  
+  // If it's not a local URL and not YouTube, check if it's HTTPS
   if (!url.startsWith('/')) {
-    return FALLBACK_IMAGES[0];
+    // If it's HTTP, try to convert to HTTPS
+    if (url.startsWith('http:')) {
+      return url.replace('http:', 'https:');
+    }
+    
+    // If we can't handle it, use a fallback
+    if (!url.startsWith('https:')) {
+      return FALLBACK_IMAGES[0];
+    }
   }
   
   return url;
@@ -86,6 +108,15 @@ export const getBestYouTubeThumbnail = (videoId: string): string => {
     return LOCAL_FALLBACK_IMAGES[0];
   }
   
-  // Simply return a fallback image instead of trying YouTube URLs
-  return fixYouTubeThumbnailUrl(videoId);
+  // Try several thumbnail qualities in order
+  const thumbnailUrls = [
+    `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`, // HD quality if available
+    `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`, // High quality
+    `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`, // Medium quality
+    `https://img.youtube.com/vi/${videoId}/default.jpg` // Default quality
+  ];
+  
+  // Return the highest quality URL - the component will handle fallback if it fails
+  return thumbnailUrls[0];
 };
+

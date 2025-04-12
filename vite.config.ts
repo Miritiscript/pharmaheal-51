@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      overlay: true,
+    },
   },
   plugins: [
     react(),
@@ -19,6 +22,10 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  // Ensure all development tools work properly
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
   },
   build: {
     outDir: "dist",
@@ -36,5 +43,12 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name].[hash].[ext]'
       },
     },
+  },
+  // Explicitly define development behavior
+  mode: process.env.NODE_ENV || mode,
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || mode),
+    'import.meta.env.DEV': mode === 'development',
+    'import.meta.env.PROD': mode === 'production',
   },
 }));

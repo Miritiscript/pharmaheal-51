@@ -28,8 +28,8 @@
 
 # Brotli compression is automatically enabled on Netlify
 
-# Updated CSP headers to allow all required resources
+# Updated CSP headers to allow all required resources including development tools
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.unsplash.com /lovable-uploads/* blob:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;"
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.unsplash.com /lovable-uploads/* blob:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;"

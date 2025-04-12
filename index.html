@@ -19,19 +19,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PharmaHeal" />
     
-    <!-- Security headers - Updated to allow required resources -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.unsplash.com /lovable-uploads/* blob:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;">
+    <!-- Updated CSP to be less restrictive during development -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.unsplash.com /lovable-uploads/* blob:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;">
   </head>
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <!-- IMPORTANT: GPT Engineer script tag moved before the main script -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Modified Service Worker Registration to check for development mode -->
     <script>
-      if ('serviceWorker' in navigator) {
+      // Only register service worker in production mode
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
             .then(registration => {
@@ -41,6 +42,17 @@
               console.error('Service Worker registration failed:', error);
             });
         });
+      } else {
+        console.log('Service Worker not registered - development mode detected');
+        // Unregister any existing service workers in development mode
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let registration of registrations) {
+              registration.unregister();
+              console.log('Service Worker unregistered for development');
+            }
+          });
+        }
       }
     </script>
   </body>

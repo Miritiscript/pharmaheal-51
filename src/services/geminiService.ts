@@ -16,9 +16,71 @@ export interface GeminiResponse {
   };
 }
 
+// List of topics that are considered medical and within scope
+const MEDICAL_TOPIC_KEYWORDS = [
+  "disease", "symptom", "diagnosis", "treatment", "medicine", "drug", "medication",
+  "antibiotic", "vaccine", "health", "medical", "doctor", "nurse", "pharmacy",
+  "hospital", "clinic", "patient", "dosage", "prescription", "side effect", "pain",
+  "blood", "heart", "kidney", "liver", "lung", "brain", "surgery", "cancer", "diabetes",
+  "hypertension", "asthma", "arthritis", "allergies", "virus", "infection", "condition",
+  "syndrome", "disorder", "supplement", "vitamin", "mineral", "nutrition", "diet",
+  "wellness", "herbal", "natural remedy", "alternative medicine", "contraindication",
+  "interaction", "immune", "chronic", "acute", "dose", "recovery", "therapy", "wound",
+  "injury", "emergency", "preventive", "healing", "illness", "prescription"
+];
+
+// Function to check if a query is medical-related
+const isMedicalQuery = (query: string): boolean => {
+  const normalizedQuery = query.toLowerCase();
+  
+  // Check for known non-medical topics
+  const nonMedicalIndicators = [
+    /\b(celebrity|movie|song|actor|actress|singer|film|tv show|television|sports|team|player|game|politics|politician|election|president)\b/i,
+    /\b(car|vehicle|truck|bus|train|plane|airplane|transportation|travel|vacation|hotel|resort)\b/i,
+    /\b(computer|laptop|phone|smartphone|device|gadget|technology|app|software|program|code|programming)\b/i,
+    /\b(history|war|battle|king|queen|emperor|empire|country|nation|region)\b/i,
+    /\b(food recipe|restaurant|cooking|chef|meal|dinner|lunch|breakfast)\b/i,
+    /\b(music|band|concert|album|song|genre|artist)\b/i,
+  ];
+  
+  for (const regex of nonMedicalIndicators) {
+    if (regex.test(normalizedQuery)) {
+      return false;
+    }
+  }
+  
+  // Check for medical keywords
+  for (const keyword of MEDICAL_TOPIC_KEYWORDS) {
+    if (normalizedQuery.includes(keyword.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  // If no clear indicators are found, perform a more detailed analysis
+  
+  // Check for "what is" questions about specific conditions
+  if (normalizedQuery.includes("what is") || 
+      normalizedQuery.includes("how to treat") || 
+      normalizedQuery.includes("symptoms of") ||
+      normalizedQuery.includes("causes of") ||
+      normalizedQuery.includes("cure for") ||
+      normalizedQuery.includes("medicine for") ||
+      normalizedQuery.includes("remedy for")) {
+    return true;
+  }
+  
+  // Default to being cautious - if we're not sure, assume it's not medical
+  return false;
+};
+
 export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
   if (!query.trim()) {
     throw new Error("Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.");
+  }
+  
+  // Check if the query is medical-related
+  if (!isMedicalQuery(query)) {
+    throw new Error("PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness.");
   }
   
   try {

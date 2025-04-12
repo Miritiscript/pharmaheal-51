@@ -1,5 +1,6 @@
 
 import { YouTubeSearchResponse, convertYouTubeToVideos, VideoCategory, mockCategories } from "@/data/mockVideos";
+import { fixYouTubeThumbnailUrl, getFallbackImage } from "@/utils/imageUtils";
 
 const API_KEY = "AIzaSyDL6bYbpjR_wWP5c-a5ubI4yTPtwcL_EVs";
 const BASE_URL = "https://www.googleapis.com/youtube/v3";
@@ -11,12 +12,11 @@ let useYouTubeAPI = true;
 export const getThumbnailUrl = (videoId: string): string => {
   if (!videoId) {
     console.warn("Invalid video ID provided for thumbnail");
-    return "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80";
+    return getFallbackImage('default');
   }
   
-  // Always use https protocol
-  // Use hqdefault.jpg directly from YouTube
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  // Try multiple formats to maximize compatibility
+  return fixYouTubeThumbnailUrl(videoId);
 };
 
 // Validate videoId to ensure it's in the correct format
@@ -136,7 +136,7 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   }
 };
 
-// Function is kept but is now internal only
+// Function to control API usage (internal only)
 export const setUseYouTubeAPI = (useAPI: boolean) => {
   useYouTubeAPI = useAPI;
 };

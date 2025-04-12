@@ -1,17 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, Play, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Video, getFallbackImageByCategory } from '@/data/mockVideos';
+import { Video } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
 import { getThumbnailUrl, validateVideoId } from '@/services/youtubeService';
-
-// Array of fallback images from Unsplash for different categories
-const FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=640&q=80",
-  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=640&q=80"
-];
+import { 
+  FALLBACK_IMAGES, 
+  LOCAL_FALLBACK_IMAGES, 
+  preloadImages 
+} from '@/utils/imageUtils';
 
 interface VideoPlayerProps {
   video: Video | null;
@@ -26,31 +24,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
   
   // Preload fallback images to ensure they're in cache
   useEffect(() => {
-    FALLBACK_IMAGES.forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
+    preloadImages(FALLBACK_IMAGES);
+    preloadImages(LOCAL_FALLBACK_IMAGES);
+    
+    // Preload related video thumbnails
+    if (relatedVideos?.length) {
+      const thumbnails = relatedVideos.map(v => v.thumbnail);
+      preloadImages(thumbnails);
+    }
+  }, [relatedVideos]);
   
   const handleImageError = (videoId: string) => {
+    console.warn(`Failed to load thumbnail for video: ${videoId}`);
     setFailedImages(prev => ({
       ...prev,
       [videoId]: true
     }));
-    console.warn(`Failed to load thumbnail for video: ${videoId}`);
   };
   
   // Function to get a fallback image based on video ID
   const getFallbackImage = (videoId: string) => {
-    // Use a hash of the videoId to select a consistent fallback image
-    const hashCode = videoId.split('').reduce((a, b) => {
+    // Try local fallbacks first
+    const localIndex = Math.abs(videoId.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
-    }, 0);
+    }, 0) % LOCAL_FALLBACK_IMAGES.length);
     
-    // Use absolute value and modulo to get index
-    const index = Math.abs(hashCode) % FALLBACK_IMAGES.length;
-    return FALLBACK_IMAGES[index];
+    return LOCAL_FALLBACK_IMAGES[localIndex];
   };
   
   // Function to get the best possible thumbnail URL

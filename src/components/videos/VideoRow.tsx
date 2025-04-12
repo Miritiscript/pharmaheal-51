@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Play, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Video, VideoCategory, getFallbackImageByCategory } from '@/data/mockVideos';
+import { Video, VideoCategory } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
 import { getThumbnailUrl, validateVideoId } from '@/services/youtubeService';
-
-// Array of fallback images from Unsplash for different categories
-const FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=480&q=80",
-  "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=480&q=80",
-  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&q=80",
-  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=480&q=80"
-];
+import { 
+  getFallbackImage, 
+  FALLBACK_IMAGES, 
+  LOCAL_FALLBACK_IMAGES, 
+  preloadImages 
+} from '@/utils/imageUtils';
 
 interface VideoRowProps {
   category: VideoCategory;
@@ -24,40 +22,38 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
   // Track which images have failed to load
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   
-  // Preload fallback images to ensure they're in cache
+  // Preload all fallback images to ensure they're in cache
   useEffect(() => {
-    FALLBACK_IMAGES.forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
+    // Preload unsplash fallbacks
+    preloadImages(FALLBACK_IMAGES);
+    
+    // Preload local fallbacks
+    preloadImages(LOCAL_FALLBACK_IMAGES);
+    
+    // Preload for this category's videos
+    const videoThumbnails = category.videos.map(video => video.thumbnail);
+    preloadImages(videoThumbnails);
+  }, [category]);
   
   const handleImageError = (videoId: string) => {
+    console.warn(`Failed to load thumbnail for video: ${videoId}`);
     setFailedImages(prev => ({
       ...prev,
       [videoId]: true
     }));
-    console.warn(`Failed to load thumbnail for video: ${videoId}`);
-  };
-  
-  // Function to get a fallback image based on video ID
-  const getFallbackImage = (videoId: string) => {
-    // Use a hash of the videoId to select a consistent fallback image
-    const hashCode = videoId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    // Use absolute value and modulo to get index
-    const index = Math.abs(hashCode) % FALLBACK_IMAGES.length;
-    return FALLBACK_IMAGES[index];
   };
   
   // Function to get the best possible thumbnail URL
   const getBestThumbnailUrl = (video: Video): string => {
     // If image already failed, use fallback
     if (failedImages[video.videoId]) {
-      return getFallbackImage(video.videoId);
+      // Try a local fallback first
+      const localIndex = Math.abs(video.videoId.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0) % LOCAL_FALLBACK_IMAGES.length);
+      
+      return LOCAL_FALLBACK_IMAGES[localIndex];
     }
     
     // If thumbnail doesn't start with https or http, it might be a relative path

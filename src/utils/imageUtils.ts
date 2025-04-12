@@ -50,8 +50,9 @@ export const fixYouTubeThumbnailUrl = (videoId: string): string => {
     return getFallbackImage('default');
   }
   
-  // Ensure we're using the correct format and HTTPS
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  // Fixed approach: use various formats to maximize compatibility
+  // Try v2 format used in modern YouTube embed API
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 };
 
 // General purpose URL fixer for any image URL

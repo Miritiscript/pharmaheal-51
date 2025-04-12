@@ -1,8 +1,8 @@
 
 // Cache names
-const CACHE_NAME = 'pharmaheal-v7';
-const DATA_CACHE_NAME = 'pharmaheal-data-v7';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v7';
+const CACHE_NAME = 'pharmaheal-v8';
+const DATA_CACHE_NAME = 'pharmaheal-data-v8';
+const IMAGE_CACHE_NAME = 'pharmaheal-images-v8';
 
 // Files to cache
 const urlsToCache = [
@@ -23,6 +23,13 @@ const fallbackImages = [
   'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=480&q=80',
   'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&q=80',
   'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=480&q=80'
+];
+
+// YouTube fallback patterns to try
+const youtubePatterns = [
+  'https://img.youtube.com/vi/*/hqdefault.jpg',
+  'https://i.ytimg.com/vi/*/hqdefault.jpg',
+  'https://i.ytimg.com/vi/*/mqdefault.jpg'
 ];
 
 // Check if we're in development mode
@@ -116,15 +123,15 @@ if (isDev) {
   self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
 
-    // Handle YouTube thumbnail requests
+    // Handle YouTube thumbnail requests with special care
     if (requestUrl.hostname.includes('ytimg.com') || 
         requestUrl.hostname.includes('youtube.com') || 
         requestUrl.hostname === 'img.youtube.com' ||
         requestUrl.hostname === 'i.ytimg.com') {
       
       event.respondWith(
-        // Try network first
-        fetch(event.request, { mode: 'cors', credentials: 'omit' })
+        // Try network first with no-cors
+        fetch(event.request, { mode: 'no-cors', credentials: 'omit' })
           .then(response => {
             // Clone and cache the response
             const responseToCache = response.clone();
@@ -155,7 +162,7 @@ if (isDev) {
                     }
                     
                     // Last resort - try to fetch the first fallback directly
-                    return fetch(fallbackImages[0])
+                    return fetch(fallbackImages[0], { mode: 'no-cors' })
                       .catch(() => {
                         return new Response('Failed to load image', {
                           status: 404,

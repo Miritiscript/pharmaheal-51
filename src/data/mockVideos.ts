@@ -1,4 +1,6 @@
 
+import { fixYouTubeThumbnailUrl, getFallbackImage } from "@/utils/imageUtils";
+
 export interface Video {
   id: string;
   title: string;
@@ -171,7 +173,7 @@ export const convertYouTubeToVideos = (
     } 
     // If that fails, construct it from videoId
     else if (videoId) {
-      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      thumbnailUrl = fixYouTubeThumbnailUrl(videoId);
     } 
     // If all else fails, use a category-based fallback
     else {

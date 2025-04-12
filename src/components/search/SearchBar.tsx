@@ -30,7 +30,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
       setQuery(initialQuery);
       onSearch(initialQuery);
     }
-  }, [initialQuery]);
+  }, [initialQuery, onSearch]);
   
   // Debounce the search to avoid excessive queries
   useEffect(() => {

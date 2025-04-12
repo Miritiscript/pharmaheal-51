@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Link } from 'react-router-dom';
 import { MessageSquareText, Play } from 'lucide-react';
 import PharmacyImagesGrid from './PharmacyImagesGrid';
+import PharmacyHeroImage from './PharmacyHeroImage';
 
 const Hero: React.FC = () => {
   return (
@@ -11,10 +12,16 @@ const Hero: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-left">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-balance">
-              Your Health Journey,
-              <span className="gradient-text block">Intelligently Guided</span>
-            </h1>
+            <div className="flex items-center mb-4">
+              <img 
+                src="/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png" 
+                alt="PharmaHeal Logo" 
+                className="h-10 w-10 mr-3"
+              />
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-balance">
+                <span className="gradient-text">PharmaHeal</span>
+              </h1>
+            </div>
             <p className="text-lg mb-8 text-muted-foreground max-w-xl">
               PharmaHeal combines AI assistance, educational videos, and reliable 
               medication information to empower your health decisions.
@@ -35,7 +42,7 @@ const Hero: React.FC = () => {
             </div>
           </div>
           <div className="w-full animate-slide-up">
-            <PharmacyImagesGrid />
+            <PharmacyHeroImage />
           </div>
         </div>
       </div>

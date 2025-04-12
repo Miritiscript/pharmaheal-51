@@ -4,24 +4,24 @@ import React from 'react';
 const PharmacyImagesGrid: React.FC = () => {
   const pharmacyImages = [
     {
-      url: "/assets/pharmacy-images/diabetes-monitoring.jpg",
-      alt: "Blood glucose meter for diabetes monitoring",
-      caption: "Diabetes management tools"
+      url: "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
+      alt: "PharmaHeal medical services",
+      caption: "Expert healthcare"
     },
     {
-      url: "/assets/pharmacy-images/healthy-food.jpg",
-      alt: "Fresh vegetables and healthy food",
-      caption: "Nutrition & balanced diet"
+      url: "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
+      alt: "PharmaHeal logo",
+      caption: "Trusted pharmacy advice"
     },
     {
-      url: "/assets/pharmacy-images/blood-pressure.jpg",
-      alt: "Blood pressure monitor",
-      caption: "Hypertension monitoring"
+      url: "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
+      alt: "Medical consultation",
+      caption: "Personalized care"
     },
     {
-      url: "/assets/pharmacy-images/herbal-tea.jpg",
-      alt: "Herbal tea and medicinal plants",
-      caption: "Herbal wellness supplements"
+      url: "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
+      alt: "PharmaHeal branding",
+      caption: "Quality healthcare"
     }
   ];
 

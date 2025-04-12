@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="flex items-center gap-2">
                 <img 
-                  src="/logo-icon.png" 
+                  src="/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png" 
                   alt="PharmaHeal Logo" 
                   className="h-8 w-8"
                 />

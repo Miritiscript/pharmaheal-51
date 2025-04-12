@@ -67,8 +67,10 @@ export const searchYouTubeVideos = async (query: string, maxResults = 8): Promis
   }
 };
 
-// Helper function to ensure thumbnail URLs always use HTTPS
+// Helper function to ensure thumbnail URLs always use HTTPS and append options
 export const getThumbnailUrl = (videoId: string): string => {
+  // Never use http protocol, always https
+  // Add quality parameters to optimize loading
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 };
 

@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/Button';
 import { Video } from '@/data/mockVideos';
 import { useTheme } from 'next-themes';
 
-// Placeholder image from Unsplash for fallback
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=80";
+// Array of fallback images from Unsplash for different categories
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=640&q=80",
+  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=640&q=80"
+];
 
 interface VideoPlayerProps {
   video: Video | null;
@@ -25,6 +30,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
       [videoId]: true
     }));
     console.warn(`Failed to load thumbnail for video: ${videoId}`);
+  };
+  
+  // Function to get a fallback image based on video ID
+  const getFallbackImage = (videoId: string) => {
+    // Use a hash of the videoId to select a consistent fallback image
+    const hashCode = videoId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    // Use absolute value and modulo to get index
+    const index = Math.abs(hashCode) % FALLBACK_IMAGES.length;
+    return FALLBACK_IMAGES[index];
   };
   
   if (!video) return null;
@@ -86,7 +104,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
             >
               <div className="relative aspect-video">
                 <img 
-                  src={failedImages[relVideo.videoId] ? FALLBACK_IMAGE : relVideo.thumbnail.replace('http:', 'https:')}
+                  src={failedImages[relVideo.videoId]
+                    ? getFallbackImage(relVideo.videoId)
+                    : relVideo.thumbnail.replace('http:', 'https:')}
                   alt={`Thumbnail for ${relVideo.title}`}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"

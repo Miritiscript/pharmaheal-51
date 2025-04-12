@@ -131,18 +131,33 @@ export interface YouTubeSearchResponse {
   nextPageToken?: string;
 }
 
-// Convert YouTube API response to our Video type
+// Convert YouTube API response to our Video type with improved thumbnail handling
 export const convertYouTubeToVideos = (
   youtubeVideos: YouTubeVideo[], 
   category: string
 ): Video[] => {
-  return youtubeVideos.map((video) => ({
-    id: video.id.videoId,
-    title: video.snippet.title,
-    thumbnail: video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium?.url,
-    duration: "Preview",
-    category,
-    description: video.snippet.description,
-    videoId: video.id.videoId,
-  }));
+  return youtubeVideos.map((video) => {
+    // Get the thumbnail URL from the API response
+    let thumbnailUrl = video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium?.url;
+    
+    // Ensure we're using HTTPS for all thumbnails
+    if (thumbnailUrl && thumbnailUrl.startsWith('http:')) {
+      thumbnailUrl = thumbnailUrl.replace('http:', 'https:');
+    }
+    
+    // If we don't have a thumbnail URL from the API, construct one
+    if (!thumbnailUrl && video.id.videoId) {
+      thumbnailUrl = `https://img.youtube.com/vi/${video.id.videoId}/hqdefault.jpg`;
+    }
+    
+    return {
+      id: video.id.videoId,
+      title: video.snippet.title,
+      thumbnail: thumbnailUrl,
+      duration: "Preview",
+      category,
+      description: video.snippet.description,
+      videoId: video.id.videoId,
+    };
+  });
 };

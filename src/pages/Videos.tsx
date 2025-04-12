@@ -21,6 +21,8 @@ const Videos: React.FC = () => {
     preloadImages.forEach(src => {
       const img = new Image();
       img.src = `${src}?auto=format&fit=crop&w=480&q=80`;
+      img.onload = () => console.log(`Preloaded fallback image: ${src}`);
+      img.onerror = () => console.warn(`Failed to preload fallback image: ${src}`);
     });
   }, []);
   

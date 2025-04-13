@@ -10,7 +10,11 @@ type ThemeContextType = {
 
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+interface ThemeProviderProps {
+  children: React.ReactNode;
+}
+
+export function ThemeProvider({ children }: ThemeProviderProps): React.ReactElement {
   const [theme, setTheme] = React.useState<Theme>(() => {
     // Check if we're in a browser environment (avoid SSR issues)
     if (typeof window !== 'undefined') {

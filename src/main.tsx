@@ -28,4 +28,8 @@ rootElement.style.height = "100vh";
 rootElement.style.margin = "0";
 rootElement.style.padding = "0";
 
-createRoot(rootElement).render(<App />);
+createRoot(rootElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

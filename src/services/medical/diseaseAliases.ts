@@ -82,7 +82,7 @@ export const DISEASE_ALIAS_MAP: Record<string, string> = {
   "graves": "Graves' Disease",
   "hashimoto's": "Hashimoto's Thyroiditis",
   "hashimotos": "Hashimoto's Thyroiditis",
-  "pcos": "Polycystic Ovary Syndrome",
+  "pcos": "Polycystic Ovary Syndrome", // Moved from Endocrine to appear once in Women's health section
   "cushings": "Cushing's Syndrome",
   "cushing's": "Cushing's Syndrome",
   "addison's": "Addison's Disease",
@@ -188,7 +188,8 @@ export const DISEASE_ALIAS_MAP: Record<string, string> = {
   "bph": "Benign Prostatic Hyperplasia",
   "enlarged prostate": "Benign Prostatic Hyperplasia",
   "prostatitis": "Prostatitis",
-  "uti": "Urinary Tract Infection",
+  // "uti" is already defined above in Bacterial infections
+  "urine infection": "Urinary Tract Infection",
   "incontinence": "Urinary Incontinence",
   "kidney stones": "Nephrolithiasis",
   "ckd": "Chronic Kidney Disease",
@@ -198,6 +199,7 @@ export const DISEASE_ALIAS_MAP: Record<string, string> = {
   "sti": "Sexually Transmitted Infection",
   
   // Women's health
+  // "pcos" was moved to appear only here instead of duplicated in Endocrine
   "pcos": "Polycystic Ovary Syndrome",
   "endometriosis": "Endometriosis",
   "endo": "Endometriosis",
@@ -332,3 +334,4 @@ export const MEDICAL_SPECIALTIES = [
   "acupuncture", "ayurveda", "herbal medicine", "homeopathy",
   "naturopathy", "traditional chinese medicine"
 ];
+

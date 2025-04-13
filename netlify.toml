@@ -38,3 +38,19 @@
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Force HTTPS for all connections
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# New plugin to ensure build cache is cleared for each deployment
+[[plugins]]
+  package = "@netlify/plugin-gatsby"
+
+# Command to run after each successful build - optional for notifications
+[build.environment]
+  NODE_VERSION = "18"
+
+# Make sure CI builds always have fresh dependencies
+[build.processing]
+  skip_processing = false

@@ -19,12 +19,22 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [microphoneAvailable, setMicrophoneAvailable] = useState(false);
+  const [browserSupport, setBrowserSupport] = useState(false);
   const suggestionBoxRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
   
   // Check if browser supports speech recognition
-  const browserSupportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  useEffect(() => {
+    const speechSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+    setBrowserSupport(speechSupported);
+    
+    if (!speechSupported) {
+      console.log('Speech recognition not supported in this browser');
+    } else {
+      console.log('Speech recognition is supported');
+    }
+  }, []);
   
   useEffect(() => {
     // Initialize and check for microphone
@@ -32,6 +42,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicrophoneAvailable(true);
+        setPermissionDenied(false);
+        console.log('Microphone access granted');
         // Stop tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
@@ -44,45 +56,53 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     checkMicrophoneAccess();
     
     // Initialize speech recognition
-    if (browserSupportsSpeech) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      
-      if (recognitionRef.current) {
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'en-US';
-        
-        recognitionRef.current.onresult = (event) => {
-          const current = event.resultIndex;
-          const result = event.results[current];
-          const transcriptText = result[0].transcript;
-          setTranscript(transcriptText);
+    if (browserSupport) {
+      try {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
           
-          if (result.isFinal) {
-            setInput(transcriptText);
-            stopListening();
+          if (recognitionRef.current) {
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
+            recognitionRef.current.lang = 'en-US';
+            
+            recognitionRef.current.onresult = (event) => {
+              const current = event.resultIndex;
+              const result = event.results[current];
+              const transcriptText = result[0].transcript;
+              console.log('Speech recognized:', transcriptText);
+              setTranscript(transcriptText);
+              
+              if (result.isFinal) {
+                setInput(transcriptText);
+                stopListening();
+              }
+            };
+            
+            recognitionRef.current.onerror = (event) => {
+              console.error('Speech recognition error', event.error);
+              
+              if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                setPermissionDenied(true);
+                toast({
+                  title: "Microphone Access Denied",
+                  description: "Please enable microphone access in your browser settings to use voice input.",
+                  variant: "destructive",
+                });
+              }
+              
+              stopListening();
+            };
+            
+            recognitionRef.current.onend = () => {
+              setIsListening(false);
+              console.log('Speech recognition ended');
+            };
           }
-        };
-        
-        recognitionRef.current.onerror = (event) => {
-          console.error('Speech recognition error', event.error);
-          
-          if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-            setPermissionDenied(true);
-            toast({
-              title: "Microphone Access Denied",
-              description: "Please enable microphone access in your browser settings to use voice input.",
-              variant: "destructive",
-            });
-          }
-          
-          stopListening();
-        };
-        
-        recognitionRef.current.onend = () => {
-          setIsListening(false);
-        };
+        }
+      } catch (error) {
+        console.error('Error initializing speech recognition:', error);
       }
     }
     
@@ -95,7 +115,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         recognitionRef.current.onend = null;
       }
     };
-  }, []);
+  }, [browserSupport, toast]);
   
   // Filter disease suggestions based on input
   useEffect(() => {
@@ -127,7 +147,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   }, []);
   
   const startListening = async () => {
-    if (!browserSupportsSpeech) {
+    console.log('Starting listening...');
+    if (!browserSupport) {
       toast({
         title: "Voice Input Not Supported",
         description: "Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.",
@@ -142,6 +163,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicrophoneAvailable(true);
         setPermissionDenied(false);
+        console.log('Microphone access re-granted');
         // Stop tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
@@ -159,8 +181,45 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       try {
         // Reset the transcript
         setTranscript('');
+        
+        // Ensure we create a fresh instance to avoid stale state issues
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+        
+        recognitionRef.current.onresult = (event) => {
+          const current = event.resultIndex;
+          const result = event.results[current];
+          const transcriptText = result[0].transcript;
+          console.log('Speech recognized:', transcriptText);
+          setTranscript(transcriptText);
+          
+          if (result.isFinal) {
+            setInput(transcriptText);
+            stopListening();
+          }
+        };
+        
+        recognitionRef.current.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          toast({
+            title: "Speech Recognition Error",
+            description: `Error: ${event.error}. Please try again.`,
+            variant: "destructive",
+          });
+          stopListening();
+        };
+        
+        recognitionRef.current.onend = () => {
+          console.log('Speech recognition ended');
+          setIsListening(false);
+        };
+        
         recognitionRef.current.start();
         setIsListening(true);
+        console.log('Speech recognition started');
         
         toast({
           title: "Listening...",
@@ -178,9 +237,11 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   };
   
   const stopListening = () => {
+    console.log('Stopping listening...');
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
+        console.log('Speech recognition stopped');
       } catch (error) {
         console.error('Failed to stop speech recognition:', error);
       }

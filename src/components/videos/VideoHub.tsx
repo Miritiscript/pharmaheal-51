@@ -13,6 +13,11 @@ import { Button } from '../ui/Button';
 import { Filter } from 'lucide-react';
 import { LOCAL_FALLBACK_IMAGES, preloadImages } from '@/utils/imageUtils';
 
+// Toast IDs for preventing duplicate toasts
+const TOAST_IDS = {
+  imagePreloadError: 'image-preload-error',
+};
+
 const VideoHub: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [categories, setCategories] = useState<VideoCategory[]>([]);
@@ -42,7 +47,7 @@ const VideoHub: React.FC = () => {
         if (fetchedCategories && fetchedCategories.length > 0) {
           setCategories(fetchedCategories);
           setFilteredCategories(fetchedCategories);
-          // Toast already displayed in the API call
+          // Toast is now handled in the service
         } else {
           // If no videos were returned, fallback to mock data
           console.warn("No videos returned from API, using mock data");
@@ -54,7 +59,7 @@ const VideoHub: React.FC = () => {
         // Fallback to mock data already handled in service
         setCategories(mockCategories);
         setFilteredCategories(mockCategories);
-        toast.error("Couldn't load videos, using cached data instead");
+        // Toast is now handled in the service
       } finally {
         setIsLoading(false);
       }

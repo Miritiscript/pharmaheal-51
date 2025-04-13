@@ -1,3 +1,4 @@
+
 // This file would be in src/services/youtubeService.ts
 import { toast } from 'sonner';
 import { VideoCategory, mockCategories } from '@/data/mockVideos';
@@ -13,6 +14,23 @@ const isToastActive = (id: string): boolean => {
   // This is a simple implementation since sonner doesn't have a direct isActive method
   // We'll use a wrapper around toast to manage this
   return document.getElementById(`toast-${id}`) !== null;
+};
+
+/**
+ * Validates if a string is a valid YouTube video ID
+ * Basic validation - YouTube IDs are typically 11 characters
+ */
+export const validateVideoId = (videoId: string): boolean => {
+  // YouTube video IDs are typically 11 characters long
+  // This is a simple validation. For production, you might want more robust validation
+  if (!videoId || typeof videoId !== 'string') {
+    return false;
+  }
+  
+  // Check if it matches the typical YouTube ID pattern
+  // YouTube IDs generally contain alphanumeric characters, underscores and hyphens
+  const youtubeIdPattern = /^[a-zA-Z0-9_-]{11}$/;
+  return youtubeIdPattern.test(videoId);
 };
 
 /**

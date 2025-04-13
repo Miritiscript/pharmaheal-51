@@ -4,6 +4,7 @@ import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import SuggestedPrompt from './SuggestedPrompt';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { commonDiseases } from '@/data/diseasesList';
 
 interface ChatInputProps {
@@ -22,18 +23,26 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const [browserSupport, setBrowserSupport] = useState(false);
   const suggestionBoxRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   // Check if browser supports speech recognition
   useEffect(() => {
-    const speechSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-    setBrowserSupport(speechSupported);
+    const checkSpeechSupport = () => {
+      // Explicitly check for both standard and webkit prefixed versions
+      const speechSupported = 
+        'SpeechRecognition' in window || 
+        'webkitSpeechRecognition' in window;
+      
+      setBrowserSupport(speechSupported);
+      
+      if (!speechSupported) {
+        console.log('Speech recognition not supported in this browser');
+      } else {
+        console.log('Speech recognition is supported');
+      }
+    };
     
-    if (!speechSupported) {
-      console.log('Speech recognition not supported in this browser');
-    } else {
-      console.log('Speech recognition is supported');
-    }
+    checkSpeechSupport();
   }, []);
   
   useEffect(() => {
@@ -44,12 +53,40 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         setMicrophoneAvailable(true);
         setPermissionDenied(false);
         console.log('Microphone access granted');
+        
+        // List available audio devices
+        navigator.mediaDevices.enumerateDevices()
+          .then(devices => {
+            const audioInputs = devices.filter(device => device.kind === 'audioinput');
+            console.log('Available audio input devices:', audioInputs);
+          })
+          .catch(err => {
+            console.error('Error enumerating devices:', err);
+          });
+        
         // Stop tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
         console.error("Microphone access error:", error);
         setMicrophoneAvailable(false);
         setPermissionDenied(true);
+        
+        // Use the Permissions API to get more details
+        if ('permissions' in navigator) {
+          navigator.permissions.query({ name: 'microphone' as PermissionName })
+            .then(permissionStatus => {
+              console.log('Microphone permission status:', permissionStatus.state);
+              
+              if (permissionStatus.state === 'denied') {
+                toast.error("Microphone access denied. Please enable it in your browser settings.", {
+                  duration: 5000,
+                });
+              }
+            })
+            .catch(err => {
+              console.error('Error checking permission status:', err);
+            });
+        }
       }
     };
     
@@ -58,7 +95,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     // Initialize speech recognition
     if (browserSupport) {
       try {
+        // Handle both standard and webkit prefixed versions
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
         if (SpeechRecognition) {
           recognitionRef.current = new SpeechRecognition();
           
@@ -85,10 +124,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
               
               if (event.error === 'not-allowed' || event.error === 'permission-denied') {
                 setPermissionDenied(true);
-                toast({
-                  title: "Microphone Access Denied",
-                  description: "Please enable microphone access in your browser settings to use voice input.",
-                  variant: "destructive",
+                toast.error("Microphone Access Denied. Please enable microphone access in your browser settings.", {
+                  duration: 5000,
+                });
+              } else {
+                toast.error(`Speech recognition error: ${event.error}`, {
+                  duration: 3000,
                 });
               }
               
@@ -103,6 +144,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         }
       } catch (error) {
         console.error('Error initializing speech recognition:', error);
+        toast.error("Could not initialize speech recognition", {
+          duration: 3000,
+        });
       }
     }
     
@@ -115,7 +159,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         recognitionRef.current.onend = null;
       }
     };
-  }, [browserSupport, toast]);
+  }, [browserSupport]);
   
   // Filter disease suggestions based on input
   useEffect(() => {
@@ -149,7 +193,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const startListening = async () => {
     console.log('Starting listening...');
     if (!browserSupport) {
-      toast({
+      toast.error("Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.", {
+        duration: 5000,
+      });
+      uiToast({
         title: "Voice Input Not Supported",
         description: "Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.",
         variant: "destructive",
@@ -168,7 +215,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
         console.error('Microphone access error:', error);
-        toast({
+        toast.error("Please enable microphone access in your browser settings.", {
+          duration: 5000,
+        });
+        uiToast({
           title: "Microphone Access Denied",
           description: "Please enable microphone access in your browser settings to use voice input.",
           variant: "destructive",
@@ -204,7 +254,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         
         recognitionRef.current.onerror = (event) => {
           console.error('Speech recognition error:', event.error);
-          toast({
+          toast.error(`Speech recognition error: ${event.error}. Please try again.`, {
+            duration: 3000,
+          });
+          uiToast({
             title: "Speech Recognition Error",
             description: `Error: ${event.error}. Please try again.`,
             variant: "destructive",
@@ -221,13 +274,19 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         setIsListening(true);
         console.log('Speech recognition started');
         
-        toast({
+        toast.success("Listening... Speak now.", {
+          duration: 3000,
+        });
+        uiToast({
           title: "Listening...",
           description: "Speak now. Voice input will automatically stop after you pause.",
         });
       } catch (error) {
         console.error('Failed to start speech recognition:', error);
-        toast({
+        toast.error("Failed to start voice input. Please try again.", {
+          duration: 3000,
+        });
+        uiToast({
           title: "Failed to start voice input",
           description: "There was an error starting the microphone. Please try again.",
           variant: "destructive",
@@ -259,7 +318,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
 
   const handleSend = () => {
     if (!input.trim()) {
-      toast({
+      uiToast({
         title: "Empty Input",
         description: "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.",
         variant: "destructive",
@@ -346,16 +405,17 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         <div className="absolute right-2 top-2 flex space-x-1">
           <Button
             onClick={toggleListening}
-            disabled={isLoading}
+            disabled={isLoading || (!browserSupport && !microphoneAvailable)}
             className={`p-2 ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-secondary hover:bg-secondary/90'}`}
             variant="ghost"
             size="icon"
             aria-label={isListening ? "Stop recording" : "Start voice input"}
             type="button"
+            title={!browserSupport ? "Voice input not supported in this browser" : permissionDenied ? "Microphone access denied" : "Click to use voice input"}
           >
             {isListening ? 
               <MicOff className="w-5 h-5 text-white" /> : 
-              <Mic className="w-5 h-5" />
+              <Mic className={`w-5 h-5 ${!browserSupport || permissionDenied ? 'opacity-50' : ''}`} />
             }
           </Button>
           <Button
@@ -375,6 +435,18 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         <AlertCircle className="w-3 h-3 mr-1" />
         <span>Not medical advice. Consult healthcare professionals for diagnoses and treatment.</span>
       </div>
+      {!browserSupport && (
+        <div className="mt-2 text-xs text-amber-500 dark:text-amber-400 flex items-center">
+          <AlertCircle className="w-3 h-3 mr-1" />
+          <span>Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.</span>
+        </div>
+      )}
+      {browserSupport && permissionDenied && (
+        <div className="mt-2 text-xs text-amber-500 dark:text-amber-400 flex items-center">
+          <AlertCircle className="w-3 h-3 mr-1" />
+          <span>Microphone access is denied. Please enable it in your browser settings.</span>
+        </div>
+      )}
     </div>
   );
 };

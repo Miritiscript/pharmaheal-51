@@ -18,6 +18,10 @@ const Videos: React.FC = () => {
     
     // Preload locally uploaded images as fallbacks
     try {
+      // First mark as preloaded to prevent long waiting
+      setImagesPreloaded(true);
+      
+      // Then actually preload the images in the background
       preloadImages(LOCAL_FALLBACK_IMAGES);
       console.log("Preload image request sent for:", LOCAL_FALLBACK_IMAGES);
       
@@ -41,7 +45,6 @@ const Videos: React.FC = () => {
         .then(results => {
           const succeeded = results.filter(r => r.status === 'fulfilled').length;
           console.log(`Preloaded ${succeeded} out of ${verifyImages.length} images`);
-          setImagesPreloaded(true);
           
           if (succeeded === 0) {
             toast.error("Failed to preload image assets. Some videos may not display correctly.");

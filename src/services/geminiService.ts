@@ -1,77 +1,99 @@
+import { generateGeminiContent } from './medical/geminiClient';
+import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
+import { diseaseAliasesMap } from './medical/diseaseAliases';
 
-import { validateMedicalQuery, normalizeQuery } from './medical/queryValidator';
-import { DISEASE_ALIAS_MAP } from './medical/diseaseAliases';
-import { parseCategories } from './medical/responseParser';
-import { callGeminiAPI } from './medical/geminiClient';
-import { MEDICAL_PROMPT_TEMPLATE } from './medical/geminiConfig';
+// Dictionary to track interaction info
+const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date }> = {};
 
-export interface GeminiResponse {
-  text: string;
-  categories?: {
-    diseaseDescription?: string;
-    drugRecommendations?: string;
-    sideEffects?: string;
-    contraindications?: string;
-    herbalAlternatives?: string;
-    foodBasedTreatments?: string;
-  };
-}
-
-export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
-  console.log("Processing medical query:", query);
-  
-  // Enhanced query validation - now much more permissive
-  const validation = validateMedicalQuery(query);
-  
-  // Log validation result for debugging
-  console.log("Query validation result:", validation);
-  
-  if (!validation.isValid) {
-    // This should rarely happen with our new system
-    console.error("Query rejected as non-medical:", query);
-    console.error("Rejection reason:", validation.suggestion);
-    throw new Error(validation.suggestion || "Please enter a valid medical query.");
-  }
-
-  // If there's a suggestion but query is still valid, log it for potential follow-up
-  if (validation.suggestion) {
-    console.log("Query accepted but might need clarification:", validation.suggestion);
-  }
-
-  // Enhanced query processing
-  const normalizedQuery = normalizeQuery(query);
-  let enhancedQuery = query;
-
-  // Check for known medical abbreviations and expand them
-  Object.entries(DISEASE_ALIAS_MAP).forEach(([abbrev, fullTerm]) => {
-    // Look for whole word matches with word boundaries
-    const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
-    if (regex.test(normalizedQuery)) {
-      enhancedQuery = enhancedQuery.replace(regex, fullTerm);
-      console.log(`Expanded medical term: ${abbrev} -> ${fullTerm}`);
-    }
-  });
-
+/**
+ * Processes a pharmacy-related query and returns AI-generated information
+ */
+export const generatePharmacyResponse = async (query: string) => {
   try {
-    // Prepare the prompt with our enhanced query
-    const prompt = MEDICAL_PROMPT_TEMPLATE.replace("{query}", enhancedQuery);
+    // Track interaction for this query
+    trackInteraction(query);
     
-    // Log the prompt for debugging
-    console.log("Sending prompt to Gemini API:", prompt.substring(0, 100) + "...");
+    // Validate if the query is medical-related
+    if (!isValidMedicalQuery(query)) {
+      // Even if query seems invalid, check if it's been rejected multiple times
+      const interaction = interactionTracker[query.toLowerCase().trim()];
+      if (interaction && interaction.count > 2) {
+        // If user has tried multiple times with same query, allow it to pass through
+        console.log(`Allowing previously rejected query after multiple attempts: ${query}`);
+      } else {
+        throw new Error(
+          "Please enter a valid medical query. Try asking about symptoms, medications, treatments, or specific health conditions."
+        );
+      }
+    }
     
-    // Call the Gemini API
-    const text = await callGeminiAPI(prompt);
+    // Standardize medical terms in the query
+    const normalizedQuery = query.toLowerCase();
+    let enhancedQuery = query;
     
-    // Parse the response into categories
-    const categories = parseCategories(text);
-
-    // Return the structured response
+    // Check if any words in the query match disease aliases and enhance with standard terms
+    Object.keys(diseaseAliasesMap).forEach(alias => {
+      if (normalizedQuery.includes(alias)) {
+        const standardTerm = diseaseAliasesMap[alias];
+        if (!normalizedQuery.includes(standardTerm.toLowerCase())) {
+          enhancedQuery += ` (${standardTerm})`;
+        }
+      }
+    });
+    
+    // Further expand the query with related medical terms
+    const expandedQuery = expandMedicalQuery(enhancedQuery);
+    
+    // Get AI-generated content using the enhanced and expanded query
+    console.log(`Processing medical query: ${expandedQuery}`);
+    
+    const response = await generateGeminiContent(expandedQuery);
     return {
-      text,
-      categories,
+      text: response.text,
+      query: query,
+      enhancedQuery: enhancedQuery,
+      timestamp: new Date(),
+      // Extract key medical terms that matched in the query
+      medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
+        normalizedQuery.includes(term.toLowerCase())
+      ).map(term => ({
+        colloquial: term,
+        standard: diseaseAliasesMap[term]
+      }))
     };
   } catch (error) {
     console.error("Error generating pharmacy response:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("An unexpected error occurred while processing your request.");
+    }
   }
 };
+
+/**
+ * Tracks interaction data for a query to improve response handling
+ */
+function trackInteraction(query: string) {
+  const normalizedQuery = query.toLowerCase().trim();
+  
+  if (!interactionTracker[normalizedQuery]) {
+    interactionTracker[normalizedQuery] = {
+      count: 1
+    };
+  } else {
+    interactionTracker[normalizedQuery].count++;
+  }
+  
+  // Clean up old interactions to prevent memory leaks
+  // Keep only the 100 most recent interactions
+  const queries = Object.keys(interactionTracker);
+  if (queries.length > 100) {
+    // Delete the oldest interactions
+    const oldestQueries = queries
+      .sort((a, b) => (interactionTracker[a].lastRejectedAt || 0) - (interactionTracker[b].lastRejectedAt || 0))
+      .slice(0, queries.length - 100);
+      
+    oldestQueries.forEach(q => delete interactionTracker[q]);
+  }
+}

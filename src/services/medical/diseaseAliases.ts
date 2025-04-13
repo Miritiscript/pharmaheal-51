@@ -209,7 +209,6 @@ export const diseaseAliasesMap: Record<string, string> = {
   "bph": "Benign Prostatic Hyperplasia",
   "enlarged prostate": "Benign Prostatic Hyperplasia",
   "prostatitis": "Prostatitis",
-  "urine infection": "Urinary Tract Infection",
   "incontinence": "Urinary Incontinence",
   "kidney stones": "Nephrolithiasis",
   "ckd": "Chronic Kidney Disease",
@@ -218,7 +217,7 @@ export const diseaseAliasesMap: Record<string, string> = {
   "pyelonephritis": "Pyelonephritis",
   
   // Women's health
-  "pcos": "Polycystic Ovary Syndrome",
+  "polycystic ovary syndrome": "Polycystic Ovary Syndrome",
   "endometriosis": "Endometriosis",
   "endo": "Endometriosis",
   "fibroids": "Uterine Fibroids",
@@ -310,7 +309,6 @@ export const diseaseAliasesMap: Record<string, string> = {
   "otitis media": "Otitis Media",
   "ear infection": "Otitis Media",
   "tonsillitis": "Tonsillitis",
-  "vertigo": "Vertigo",
   "meniere's": "Meniere's Disease",
   "menieres": "Meniere's Disease",
   "tinnitus": "Tinnitus",
@@ -320,7 +318,6 @@ export const diseaseAliasesMap: Record<string, string> = {
   "nasal polyps": "Nasal Polyps",
   "deviated septum": "Deviated Nasal Septum",
   "laryngitis": "Laryngitis",
-  "sleep apnea": "Obstructive Sleep Apnea",
   
   // Oncological
   "cancer": "Cancer",
@@ -340,7 +337,6 @@ export const diseaseAliasesMap: Record<string, string> = {
   "glioma": "Glioma",
   "glioblastoma": "Glioblastoma",
   "gbm": "Glioblastoma",
-  "melanoma": "Melanoma",
   "carcinoma": "Carcinoma",
   "sarcoma": "Sarcoma",
   "metastasis": "Metastatic Cancer",
@@ -370,4 +366,17 @@ export const medicalSpecialties = [
   "radiology", "anesthesiology", "emergency medicine", "family medicine",
   "internal medicine", "pathology", "physical therapy", "occupational therapy",
   "naturopathy", "traditional chinese medicine"
+];
+
+// Also define a list of medical symptoms for the system to recognize
+export const medicalSymptoms = [
+  "fever", "pain", "fatigue", "weakness", "cough", "shortness of breath", 
+  "nausea", "vomiting", "diarrhea", "constipation", "headache", "dizziness",
+  "rash", "itching", "swelling", "numbness", "tingling", "stiffness",
+  "bleeding", "bruising", "discharge", "inflammation", "confusion",
+  "memory loss", "anxiety", "depression", "insomnia", "sweating",
+  "weight loss", "weight gain", "loss of appetite", "increased appetite",
+  "thirst", "frequent urination", "vision changes", "hearing changes",
+  "chest pain", "palpitations", "abdominal pain", "joint pain", "muscle pain",
+  "back pain", "neck pain", "sore throat", "runny nose", "congestion"
 ];

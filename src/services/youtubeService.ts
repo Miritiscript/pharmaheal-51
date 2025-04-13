@@ -1,7 +1,9 @@
-
 // This file would be in src/services/youtubeService.ts
 import { toast } from 'sonner';
 import { VideoCategory, mockCategories } from '@/data/mockVideos';
+
+// YouTube API Key
+const YOUTUBE_API_KEY = 'AIzaSyBW4M1YVlcC6XUC_yvoOR5CUvlPvvyVlrc';
 
 // Keep track of toast IDs to prevent duplicates
 const toastIds = {
@@ -35,16 +37,64 @@ export const validateVideoId = (videoId: string): boolean => {
 };
 
 /**
+ * Makes a real API call to YouTube Data API
+ */
+const fetchFromYouTubeAPI = async (query: string, maxResults: number = 12) => {
+  console.log(`Fetching from YouTube API for: ${query}`);
+  
+  const endpoint = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`;
+  
+  const response = await fetch(endpoint);
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("YouTube API error:", errorData);
+    
+    if (response.status === 403) {
+      throw new Error("The request cannot be completed because you have exceeded your quota.");
+    }
+    
+    throw new Error(`YouTube API error: ${errorData.error?.message || response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+};
+
+/**
  * Fetches YouTube videos for a specific category
- * This would connect to the YouTube Data API in a real implementation
  */
 export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Promise<VideoCategory> => {
   try {
     console.log(`Using YouTube Data API to fetch videos for ${category.title}`);
     
-    // This would be a real API call in production
-    // For now, let's simulate an API call failure due to quota
-    throw new Error("The request cannot be completed because you have exceeded your quota.");
+    // Use the YouTube API to search for videos
+    const searchResults = await fetchFromYouTubeAPI(category.title, 12);
+    
+    if (!searchResults.items || searchResults.items.length === 0) {
+      console.warn(`No videos found for ${category.title}`);
+      throw new Error(`No videos found for ${category.title}`);
+    }
+    
+    // Map the API results to our video format
+    const videos = searchResults.items.map((item: any, index: number) => ({
+      id: `${category.id}-${index}`,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+      category: category.title,
+      videoId: item.id.videoId,
+      channelTitle: item.snippet.channelTitle,
+      duration: "4:30", // YouTube API search endpoint doesn't provide duration
+      views: "10K" // YouTube API search endpoint doesn't provide view count
+    }));
+    
+    console.log(`Successfully fetched ${videos.length} videos for ${category.title}`);
+    
+    return {
+      ...category,
+      videos
+    };
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -79,16 +129,16 @@ export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Pr
  */
 export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   try {
-    console.log("Attempting to fetch videos...");
+    console.log("Attempting to fetch videos from YouTube API...");
     
-    // Start with empty categories that match our mock structure
-    const categories: VideoCategory[] = mockCategories.map(cat => ({
-      ...cat,
-      videos: [] // Start with empty videos, to be populated
-    }));
+    // Define the categories we want to fetch
+    const categoriesToFetch = [
+      { id: "chronic", title: "Chronic Disease Management" },
+      { id: "nutrition", title: "Nutrition & Wellness" }
+    ];
     
     // Try to fetch videos for each category
-    const categoryPromises = categories.map(fetchYouTubeVideosForCategory);
+    const categoryPromises = categoriesToFetch.map(fetchYouTubeVideosForCategory);
     const updatedCategories = await Promise.all(categoryPromises);
     
     // Check if we got any videos

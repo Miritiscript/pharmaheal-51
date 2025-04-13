@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -25,10 +24,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast: uiToast } = useToast();
   
-  // Check if browser supports speech recognition
   useEffect(() => {
     const checkSpeechSupport = () => {
-      // Explicitly check for both standard and webkit prefixed versions
       const speechSupported = 
         'SpeechRecognition' in window || 
         'webkitSpeechRecognition' in window;
@@ -46,15 +43,52 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   }, []);
   
   useEffect(() => {
-    // Initialize and check for microphone
     const checkMicrophoneAccess = async () => {
+      if ('permissions' in navigator) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log('Microphone permission status:', permissionStatus.state);
+          
+          permissionStatus.onchange = () => {
+            console.log('Microphone permission changed to:', permissionStatus.state);
+            setPermissionDenied(permissionStatus.state === 'denied');
+            setMicrophoneAvailable(permissionStatus.state === 'granted');
+            
+            if (permissionStatus.state === 'granted') {
+              setPermissionDenied(false);
+              setMicrophoneAvailable(true);
+            } else if (permissionStatus.state === 'denied') {
+              setPermissionDenied(true);
+              setMicrophoneAvailable(false);
+              toast.error("Microphone access denied. Please enable it in your browser settings.", {
+                duration: 5000,
+              });
+            }
+          };
+          
+          if (permissionStatus.state === 'granted') {
+            setPermissionDenied(false);
+            setMicrophoneAvailable(true);
+          } else if (permissionStatus.state === 'denied') {
+            setPermissionDenied(true);
+            setMicrophoneAvailable(false);
+          }
+        } catch (err) {
+          console.error('Error checking microphone permission:', err);
+          tryGetUserMedia();
+        }
+      } else {
+        tryGetUserMedia();
+      }
+    };
+    
+    const tryGetUserMedia = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicrophoneAvailable(true);
         setPermissionDenied(false);
         console.log('Microphone access granted');
         
-        // List available audio devices
         navigator.mediaDevices.enumerateDevices()
           .then(devices => {
             const audioInputs = devices.filter(device => device.kind === 'audioinput');
@@ -64,38 +98,47 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
             console.error('Error enumerating devices:', err);
           });
         
-        // Stop tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
         console.error("Microphone access error:", error);
         setMicrophoneAvailable(false);
         setPermissionDenied(true);
         
-        // Use the Permissions API to get more details
-        if ('permissions' in navigator) {
-          navigator.permissions.query({ name: 'microphone' as PermissionName })
-            .then(permissionStatus => {
-              console.log('Microphone permission status:', permissionStatus.state);
-              
-              if (permissionStatus.state === 'denied') {
-                toast.error("Microphone access denied. Please enable it in your browser settings.", {
-                  duration: 5000,
-                });
-              }
-            })
-            .catch(err => {
-              console.error('Error checking permission status:', err);
-            });
+        if (error instanceof DOMException && error.name === 'NotAllowedError') {
+          toast.error("Microphone access was denied. Please ensure your browser has permission to use the microphone.", {
+            duration: 5000,
+          });
+          
+          const browser = getBrowserName();
+          let settingsInstructions = "Check your browser settings to enable microphone access.";
+          
+          if (browser === 'Chrome') {
+            settingsInstructions = "Go to Chrome Settings > Privacy and Security > Site Settings > Microphone";
+          } else if (browser === 'Firefox') {
+            settingsInstructions = "Go to Firefox Preferences > Privacy & Security > Permissions > Microphone";
+          } else if (browser === 'Safari') {
+            settingsInstructions = "Go to Safari Preferences > Websites > Microphone";
+          } else if (browser === 'Edge') {
+            settingsInstructions = "Go to Edge Settings > Cookies and site permissions > Microphone";
+          }
+          
+          uiToast({
+            title: "Microphone Access Denied",
+            description: `${settingsInstructions} to allow this site to use your microphone.`,
+            variant: "destructive",
+          });
+        } else {
+          toast.error("Could not access microphone. Please check your device settings.", {
+            duration: 5000,
+          });
         }
       }
     };
     
     checkMicrophoneAccess();
     
-    // Initialize speech recognition
     if (browserSupport) {
       try {
-        // Handle both standard and webkit prefixed versions
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (SpeechRecognition) {
@@ -150,7 +193,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       }
     }
     
-    // Clean up
     return () => {
       stopListening();
       if (recognitionRef.current) {
@@ -161,12 +203,11 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     };
   }, [browserSupport]);
   
-  // Filter disease suggestions based on input
   useEffect(() => {
     if (input.length > 1) {
       const filtered = commonDiseases.filter(disease => 
         disease.toLowerCase().includes(input.toLowerCase())
-      ).slice(0, 5); // Limit to 5 suggestions
+      ).slice(0, 5);
       
       setFilteredSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
@@ -176,7 +217,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     }
   }, [input]);
   
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target as Node)) {
@@ -204,14 +244,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       return;
     }
     
-    // Request microphone access again if previously denied
     if (permissionDenied) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicrophoneAvailable(true);
         setPermissionDenied(false);
         console.log('Microphone access re-granted');
-        // Stop tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
         console.error('Microphone access error:', error);
@@ -229,10 +267,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     
     if (recognitionRef.current) {
       try {
-        // Reset the transcript
         setTranscript('');
         
-        // Ensure we create a fresh instance to avoid stale state issues
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = true;
@@ -342,7 +378,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const handleSuggestionClick = (text: string) => {
     setInput(text);
     setShowSuggestions(false);
-    // Focus the input after setting the suggestion
     setTimeout(() => {
       document.getElementById('chat-input')?.focus();
     }, 0);
@@ -355,6 +390,27 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     "Herbal remedies for anxiety",
     "Foods to avoid with high blood pressure",
   ];
+
+  const getBrowserName = () => {
+    const userAgent = navigator.userAgent;
+    let browserName;
+    
+    if (userAgent.match(/chrome|chromium|crios/i)) {
+      browserName = "Chrome";
+    } else if (userAgent.match(/firefox|fxios/i)) {
+      browserName = "Firefox";
+    } else if (userAgent.match(/safari/i)) {
+      browserName = "Safari";
+    } else if (userAgent.match(/opr\//i)) {
+      browserName = "Opera";
+    } else if (userAgent.match(/edg/i)) {
+      browserName = "Edge";
+    } else {
+      browserName = "Unknown";
+    }
+    
+    return browserName;
+  };
 
   return (
     <div className="p-4 border-t border-border">
@@ -384,7 +440,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
           disabled={isLoading}
         />
         
-        {/* Disease suggestions dropdown */}
         {showSuggestions && (
           <div 
             ref={suggestionBoxRef}

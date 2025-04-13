@@ -1,13 +1,13 @@
 
-import { medicalTerms, medicalKeywords } from './medicalTerms';
 import { diseaseAliasesMap, medicalSpecialties, medicalSymptoms } from './diseaseAliases';
+import { MEDICAL_KEYWORDS, MEDICAL_TERMINOLOGY_EXTENDED } from './medicalTerms';
 
 // Combined list of all medical terms for validation
 const allMedicalTerms = [
   ...Object.keys(diseaseAliasesMap),
   ...Object.values(diseaseAliasesMap),
-  ...medicalTerms,
-  ...medicalKeywords,
+  ...MEDICAL_KEYWORDS,
+  ...MEDICAL_TERMINOLOGY_EXTENDED,
   ...medicalSpecialties,
   ...medicalSymptoms
 ];

@@ -1,6 +1,28 @@
+
 import { generateGeminiContent } from './medical/geminiClient';
 import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
 import { diseaseAliasesMap } from './medical/diseaseAliases';
+import { enhanceGeminiResponse } from './medical/responseParser';
+
+// Define GeminiResponse type
+export interface GeminiResponse {
+  text: string;
+  query: string;
+  enhancedQuery: string;
+  timestamp: Date;
+  medicalTermsDetected?: Array<{
+    colloquial: string;
+    standard: string;
+  }>;
+  categories?: {
+    diseaseDescription?: string;
+    drugRecommendations?: string;
+    sideEffects?: string;
+    contraindications?: string;
+    herbalAlternatives?: string;
+    foodBasedTreatments?: string;
+  };
+}
 
 // Dictionary to track interaction info
 const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date }> = {};
@@ -8,7 +30,7 @@ const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date 
 /**
  * Processes a pharmacy-related query and returns AI-generated information
  */
-export const generatePharmacyResponse = async (query: string) => {
+export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
   try {
     // Track interaction for this query
     trackInteraction(query);
@@ -48,7 +70,9 @@ export const generatePharmacyResponse = async (query: string) => {
     console.log(`Processing medical query: ${expandedQuery}`);
     
     const response = await generateGeminiContent(expandedQuery);
-    return {
+    
+    // Build the initial response
+    const initialResponse: GeminiResponse = {
       text: response.text,
       query: query,
       enhancedQuery: enhancedQuery,
@@ -61,6 +85,10 @@ export const generatePharmacyResponse = async (query: string) => {
         standard: diseaseAliasesMap[term]
       }))
     };
+    
+    // Enhance the response with parsed categories
+    const enhancedResponse = enhanceGeminiResponse(initialResponse);
+    return enhancedResponse;
   } catch (error) {
     console.error("Error generating pharmacy response:", error);
     if (error instanceof Error) {
@@ -89,9 +117,13 @@ function trackInteraction(query: string) {
   // Keep only the 100 most recent interactions
   const queries = Object.keys(interactionTracker);
   if (queries.length > 100) {
-    // Delete the oldest interactions
+    // Delete the oldest interactions - Fix arithmetic operation errors
     const oldestQueries = queries
-      .sort((a, b) => (interactionTracker[a].lastRejectedAt || 0) - (interactionTracker[b].lastRejectedAt || 0))
+      .sort((a, b) => {
+        const dateA = interactionTracker[a].lastRejectedAt ? interactionTracker[a].lastRejectedAt!.getTime() : 0;
+        const dateB = interactionTracker[b].lastRejectedAt ? interactionTracker[b].lastRejectedAt!.getTime() : 0;
+        return dateA - dateB;
+      })
       .slice(0, queries.length - 100);
       
     oldestQueries.forEach(q => delete interactionTracker[q]);

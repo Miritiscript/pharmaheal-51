@@ -30,3 +30,14 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
   const data = await response.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 };
+
+// Add generateGeminiContent function
+export const generateGeminiContent = async (query: string): Promise<{ text: string }> => {
+  try {
+    const response = await callGeminiAPI(query);
+    return { text: response };
+  } catch (error) {
+    console.error("Failed to generate Gemini content:", error);
+    throw error;
+  }
+};

@@ -1,5 +1,5 @@
 
-import * as React from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -8,10 +8,10 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
-const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  const [theme, setTheme] = React.useState<Theme>(() => {
+  const [theme, setTheme] = useState<Theme>(() => {
     // Check if we're in a browser environment (avoid SSR issues)
     if (typeof window !== 'undefined') {
       // Check if theme is stored in localStorage
@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
   });
   
   // Apply theme effect
-  React.useEffect(() => {
+  useEffect(() => {
     // Only run in browser environment
     if (typeof window === 'undefined') return;
     
@@ -52,12 +52,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
   }, [theme]);
 
   // Memoize toggle function to prevent unnecessary re-renders
-  const toggleTheme = React.useCallback(() => {
+  const toggleTheme = useCallback(() => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   }, []);
 
   // Memoize context value
-  const value = React.useMemo(() => ({
+  const value = useMemo(() => ({
     theme,
     toggleTheme
   }), [theme, toggleTheme]);
@@ -70,7 +70,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
 }
 
 export function useTheme(): ThemeContextType {
-  const context = React.useContext(ThemeContext);
+  const context = useContext(ThemeContext);
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }

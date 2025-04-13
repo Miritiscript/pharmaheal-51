@@ -8,13 +8,14 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
+// Create context with undefined as initial value
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps): React.ReactElement {
+export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(() => {
     // Check if we're in a browser environment (avoid SSR issues)
     if (typeof window !== 'undefined') {

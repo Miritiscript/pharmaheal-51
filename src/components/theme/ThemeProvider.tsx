@@ -1,5 +1,5 @@
 
-import * as React from 'react';
+import React from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -11,8 +11,9 @@ type ThemeContextType = {
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Create state with useState hook
   const [theme, setTheme] = React.useState<Theme>(() => {
-    // Check if window is defined (to avoid SSR issues)
+    // Check if we're in a browser environment (avoid SSR issues)
     if (typeof window !== 'undefined') {
       // Check if theme is stored in localStorage
       const storedTheme = localStorage.getItem('theme');
@@ -29,7 +30,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return 'light'; // Default to light theme
   });
   
+  // Apply theme effect
   React.useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
+    
     // Apply theme to document element
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -47,10 +52,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Memoize toggle function to prevent unnecessary re-renders
   const toggleTheme = React.useCallback(() => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   }, []);
 
+  // Memoize context value
   const value = React.useMemo(() => ({
     theme,
     toggleTheme

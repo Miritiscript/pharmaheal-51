@@ -1,7 +1,8 @@
 
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
 
 // Check if we're in development mode
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname.includes('.lovable.dev');
@@ -21,10 +22,10 @@ if (isDev) {
 }
 
 // Make sure the root container has a background that fills the entire viewport
-const rootElement = document.getElementById("root")!
-rootElement.style.width = "100%"
-rootElement.style.height = "100vh"
-rootElement.style.margin = "0"
-rootElement.style.padding = "0"
+const rootElement = document.getElementById("root")!;
+rootElement.style.width = "100%";
+rootElement.style.height = "100vh";
+rootElement.style.margin = "0";
+rootElement.style.padding = "0";
 
 createRoot(rootElement).render(<App />);

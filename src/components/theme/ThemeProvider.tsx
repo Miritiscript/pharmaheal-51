@@ -10,14 +10,14 @@ type ThemeContextType = {
 
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = React.useState<Theme>(() => {
     // Check if window is defined (to avoid SSR issues)
     if (typeof window !== 'undefined') {
       // Check if theme is stored in localStorage
       const storedTheme = localStorage.getItem('theme');
       if (storedTheme === 'light' || storedTheme === 'dark') {
-        return storedTheme;
+        return storedTheme as Theme;
       }
       
       // Check for OS preference
@@ -47,21 +47,26 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = React.useCallback(() => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
-  };
+  }, []);
+
+  const value = React.useMemo(() => ({
+    theme,
+    toggleTheme
+  }), [theme, toggleTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
-};
+}
 
-export const useTheme = (): ThemeContextType => {
+export function useTheme(): ThemeContextType {
   const context = React.useContext(ThemeContext);
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-};
+}

@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import SuggestedPrompt from './SuggestedPrompt';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
-import { commonDiseases } from '@/data/diseasesList';
+import { commonDiseases, normalizeDiseaseInput } from '@/data/diseasesList';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -25,6 +26,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const { toast: uiToast } = useToast();
   
   useEffect(() => {
+    // Check if browser supports speech recognition
     const checkSpeechSupport = () => {
       const speechSupported = 
         'SpeechRecognition' in window || 
@@ -44,89 +46,102 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   
   useEffect(() => {
     const checkMicrophoneAccess = async () => {
-      if ('permissions' in navigator) {
-        try {
-          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          console.log('Microphone permission status:', permissionStatus.state);
-          
-          permissionStatus.onchange = () => {
-            console.log('Microphone permission changed to:', permissionStatus.state);
-            setPermissionDenied(permissionStatus.state === 'denied');
-            setMicrophoneAvailable(permissionStatus.state === 'granted');
+      try {
+        // First try to check permissions using the Permissions API
+        if ('permissions' in navigator) {
+          try {
+            const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+            console.log('Microphone permission status:', permissionStatus.state);
             
-            if (permissionStatus.state === 'granted') {
-              setPermissionDenied(false);
-              setMicrophoneAvailable(true);
-            } else if (permissionStatus.state === 'denied') {
-              setPermissionDenied(true);
-              setMicrophoneAvailable(false);
-              toast.error("Microphone access denied. Please enable it in your browser settings.", {
-                duration: 5000,
-              });
+            const updatePermissionState = () => {
+              console.log('Microphone permission changed to:', permissionStatus.state);
+              setPermissionDenied(permissionStatus.state === 'denied');
+              setMicrophoneAvailable(permissionStatus.state === 'granted');
+            };
+            
+            permissionStatus.onchange = updatePermissionState;
+            updatePermissionState();
+            
+            // If permission is prompt, we should also check getUserMedia
+            if (permissionStatus.state === 'prompt') {
+              await tryGetUserMedia();
             }
-          };
-          
-          if (permissionStatus.state === 'granted') {
-            setPermissionDenied(false);
-            setMicrophoneAvailable(true);
-          } else if (permissionStatus.state === 'denied') {
-            setPermissionDenied(true);
-            setMicrophoneAvailable(false);
+          } catch (err) {
+            console.error('Error checking microphone permission:', err);
+            await tryGetUserMedia();
           }
-        } catch (err) {
-          console.error('Error checking microphone permission:', err);
-          tryGetUserMedia();
+        } else {
+          // Fallback to getUserMedia if Permissions API is not available
+          await tryGetUserMedia();
         }
-      } else {
-        tryGetUserMedia();
+      } catch (error) {
+        console.error('Error during microphone check:', error);
+        setMicrophoneAvailable(false);
+        setPermissionDenied(true);
       }
     };
     
     const tryGetUserMedia = async () => {
       try {
+        console.log('Attempting to get user media...');
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setMicrophoneAvailable(true);
         setPermissionDenied(false);
         console.log('Microphone access granted');
         
-        navigator.mediaDevices.enumerateDevices()
-          .then(devices => {
-            const audioInputs = devices.filter(device => device.kind === 'audioinput');
-            console.log('Available audio input devices:', audioInputs);
-          })
-          .catch(err => {
-            console.error('Error enumerating devices:', err);
-          });
+        // List available audio devices
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const audioInputs = devices.filter(device => device.kind === 'audioinput');
+          console.log('Available audio input devices:', audioInputs);
+        } catch (err) {
+          console.error('Error enumerating devices:', err);
+        }
         
+        // Important: Stop the tracks when done to release the microphone
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
         console.error("Microphone access error:", error);
         setMicrophoneAvailable(false);
-        setPermissionDenied(true);
         
-        if (error instanceof DOMException && error.name === 'NotAllowedError') {
-          toast.error("Microphone access was denied. Please ensure your browser has permission to use the microphone.", {
-            duration: 5000,
-          });
+        if (error instanceof DOMException) {
+          setPermissionDenied(true);
           
-          const browser = getBrowserName();
-          let settingsInstructions = "Check your browser settings to enable microphone access.";
-          
-          if (browser === 'Chrome') {
-            settingsInstructions = "Go to Chrome Settings > Privacy and Security > Site Settings > Microphone";
-          } else if (browser === 'Firefox') {
-            settingsInstructions = "Go to Firefox Preferences > Privacy & Security > Permissions > Microphone";
-          } else if (browser === 'Safari') {
-            settingsInstructions = "Go to Safari Preferences > Websites > Microphone";
-          } else if (browser === 'Edge') {
-            settingsInstructions = "Go to Edge Settings > Cookies and site permissions > Microphone";
+          if (error.name === 'NotAllowedError') {
+            console.error('Microphone access denied by user or system');
+            toast.error("Microphone access was denied. Please ensure your browser has permission to use the microphone.", {
+              duration: 5000,
+            });
+            
+            // Show browser-specific instructions
+            const browser = getBrowserName();
+            let settingsInstructions = "Check your browser settings to enable microphone access.";
+            
+            if (browser === 'Chrome') {
+              settingsInstructions = "Go to Chrome Settings > Privacy and Security > Site Settings > Microphone";
+            } else if (browser === 'Firefox') {
+              settingsInstructions = "Go to Firefox Preferences > Privacy & Security > Permissions > Microphone";
+            } else if (browser === 'Safari') {
+              settingsInstructions = "Go to Safari Preferences > Websites > Microphone";
+            } else if (browser === 'Edge') {
+              settingsInstructions = "Go to Edge Settings > Cookies and site permissions > Microphone";
+            }
+            
+            uiToast({
+              title: "Microphone Access Denied",
+              description: `${settingsInstructions} to allow this site to use your microphone.`,
+              variant: "destructive",
+            });
+          } else if (error.name === 'NotFoundError') {
+            console.error('No microphone found on this device');
+            toast.error("No microphone found on this device. Please connect a microphone and try again.", {
+              duration: 5000,
+            });
+          } else {
+            toast.error(`Microphone error: ${error.name}. Please check your device settings.`, {
+              duration: 5000,
+            });
           }
-          
-          uiToast({
-            title: "Microphone Access Denied",
-            description: `${settingsInstructions} to allow this site to use your microphone.`,
-            variant: "destructive",
-          });
         } else {
           toast.error("Could not access microphone. Please check your device settings.", {
             duration: 5000,
@@ -136,77 +151,49 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     };
     
     checkMicrophoneAccess();
-    
+  }, [uiToast]);
+  
+  // Initialize speech recognition
+  useEffect(() => {
     if (browserSupport) {
-      try {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
-        if (SpeechRecognition) {
-          recognitionRef.current = new SpeechRecognition();
+      const initializeSpeechRecognition = () => {
+        try {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
           
-          if (recognitionRef.current) {
-            recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = true;
-            recognitionRef.current.lang = 'en-US';
+          if (SpeechRecognition) {
+            // We don't start it here, just initialize the object
+            recognitionRef.current = new SpeechRecognition();
             
-            recognitionRef.current.onresult = (event) => {
-              const current = event.resultIndex;
-              const result = event.results[current];
-              const transcriptText = result[0].transcript;
-              console.log('Speech recognized:', transcriptText);
-              setTranscript(transcriptText);
-              
-              if (result.isFinal) {
-                setInput(transcriptText);
-                stopListening();
-              }
-            };
-            
-            recognitionRef.current.onerror = (event) => {
-              console.error('Speech recognition error', event.error);
-              
-              if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-                setPermissionDenied(true);
-                toast.error("Microphone Access Denied. Please enable microphone access in your browser settings.", {
-                  duration: 5000,
-                });
-              } else {
-                toast.error(`Speech recognition error: ${event.error}`, {
-                  duration: 3000,
-                });
-              }
-              
-              stopListening();
-            };
-            
-            recognitionRef.current.onend = () => {
-              setIsListening(false);
-              console.log('Speech recognition ended');
-            };
+            if (recognitionRef.current) {
+              recognitionRef.current.continuous = true;
+              recognitionRef.current.interimResults = true;
+              recognitionRef.current.lang = 'en-US';
+              console.log('Speech recognition initialized successfully');
+            }
           }
+        } catch (error) {
+          console.error('Error initializing speech recognition:', error);
+          toast.error("Could not initialize speech recognition", {
+            duration: 3000,
+          });
         }
-      } catch (error) {
-        console.error('Error initializing speech recognition:', error);
-        toast.error("Could not initialize speech recognition", {
-          duration: 3000,
-        });
-      }
+      };
+      
+      initializeSpeechRecognition();
     }
     
+    // Cleanup function
     return () => {
       stopListening();
-      if (recognitionRef.current) {
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.onend = null;
-      }
     };
   }, [browserSupport]);
   
+  // Handle suggestions based on input
   useEffect(() => {
     if (input.length > 1) {
+      const normalizedInput = input.toLowerCase();
       const filtered = commonDiseases.filter(disease => 
-        disease.toLowerCase().includes(input.toLowerCase())
+        disease.toLowerCase().includes(normalizedInput)
       ).slice(0, 5);
       
       setFilteredSuggestions(filtered);
@@ -217,6 +204,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     }
   }, [input]);
   
+  // Handle clicks outside suggestion box
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target as Node)) {
@@ -244,71 +232,48 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       return;
     }
     
-    if (permissionDenied) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        setMicrophoneAvailable(true);
-        setPermissionDenied(false);
-        console.log('Microphone access re-granted');
-        stream.getTracks().forEach(track => track.stop());
-      } catch (error) {
-        console.error('Microphone access error:', error);
-        toast.error("Please enable microphone access in your browser settings.", {
-          duration: 5000,
-        });
-        uiToast({
-          title: "Microphone Access Denied",
-          description: "Please enable microphone access in your browser settings to use voice input.",
-          variant: "destructive",
-        });
-        return;
-      }
+    // First verify we have microphone access
+    try {
+      console.log('Verifying microphone access before starting speech recognition');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicrophoneAvailable(true);
+      setPermissionDenied(false);
+      
+      // Important: Stop the tracks when done to release the microphone
+      // We're only checking access here, speech recognition will get its own access
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Now that we've confirmed microphone access, set up speech recognition
+      setUpSpeechRecognition();
+      
+    } catch (error) {
+      console.error('Failed to get microphone access before speech recognition:', error);
+      setPermissionDenied(true);
+      toast.error("Please enable microphone access in your browser settings.", {
+        duration: 5000,
+      });
+      uiToast({
+        title: "Microphone Access Denied",
+        description: "Please enable microphone access in your browser settings to use voice input.",
+        variant: "destructive",
+      });
     }
-    
-    if (recognitionRef.current) {
-      try {
-        setTranscript('');
-        
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'en-US';
-        
-        recognitionRef.current.onresult = (event) => {
-          const current = event.resultIndex;
-          const result = event.results[current];
-          const transcriptText = result[0].transcript;
-          console.log('Speech recognized:', transcriptText);
-          setTranscript(transcriptText);
-          
-          if (result.isFinal) {
-            setInput(transcriptText);
-            stopListening();
-          }
-        };
-        
-        recognitionRef.current.onerror = (event) => {
-          console.error('Speech recognition error:', event.error);
-          toast.error(`Speech recognition error: ${event.error}. Please try again.`, {
-            duration: 3000,
-          });
-          uiToast({
-            title: "Speech Recognition Error",
-            description: `Error: ${event.error}. Please try again.`,
-            variant: "destructive",
-          });
-          stopListening();
-        };
-        
-        recognitionRef.current.onend = () => {
-          console.log('Speech recognition ended');
-          setIsListening(false);
-        };
-        
-        recognitionRef.current.start();
-        setIsListening(true);
+  };
+  
+  const setUpSpeechRecognition = () => {
+    try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      // Create a fresh recognition instance each time
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onstart = () => {
         console.log('Speech recognition started');
+        setIsListening(true);
+        setTranscript('');
         
         toast.success("Listening... Speak now.", {
           duration: 3000,
@@ -317,17 +282,68 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
           title: "Listening...",
           description: "Speak now. Voice input will automatically stop after you pause.",
         });
-      } catch (error) {
-        console.error('Failed to start speech recognition:', error);
-        toast.error("Failed to start voice input. Please try again.", {
-          duration: 3000,
-        });
-        uiToast({
-          title: "Failed to start voice input",
-          description: "There was an error starting the microphone. Please try again.",
-          variant: "destructive",
-        });
-      }
+      };
+      
+      recognition.onresult = (event) => {
+        const current = event.resultIndex;
+        const transcriptText = event.results[current][0].transcript;
+        console.log('Speech recognized:', transcriptText);
+        setTranscript(transcriptText);
+        
+        if (event.results[current].isFinal) {
+          console.log('Final transcript:', transcriptText);
+          setInput(transcriptText);
+          stopListening();
+        }
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        
+        if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+          setPermissionDenied(true);
+          toast.error("Microphone access denied. Please check your browser settings.", {
+            duration: 3000,
+          });
+          uiToast({
+            title: "Microphone Access Denied",
+            description: "Please enable microphone access in your browser settings.",
+            variant: "destructive",
+          });
+        } else {
+          toast.error(`Speech recognition error: ${event.error}. Please try again.`, {
+            duration: 3000,
+          });
+          uiToast({
+            title: "Speech Recognition Error",
+            description: `Error: ${event.error}. Please try again.`,
+            variant: "destructive",
+          });
+        }
+        
+        stopListening();
+      };
+      
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
+        setIsListening(false);
+      };
+      
+      // Store the reference and start
+      recognitionRef.current = recognition;
+      recognition.start();
+      
+    } catch (error) {
+      console.error('Failed to start speech recognition:', error);
+      toast.error("Failed to start voice input. Please try again.", {
+        duration: 3000,
+      });
+      uiToast({
+        title: "Failed to start voice input",
+        description: "There was an error starting the microphone. Please try again.",
+        variant: "destructive",
+      });
+      setIsListening(false);
     }
   };
   
@@ -362,7 +378,17 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       return;
     }
     
-    onSendMessage(input);
+    // Normalize the input if it's a known medical term
+    const normalizedInput = normalizeDiseaseInput(input);
+    
+    // Only use the normalized input if it's different from the original
+    const finalInput = normalizedInput !== input ? normalizedInput : input;
+    
+    if (normalizedInput !== input) {
+      console.log(`Normalized input from "${input}" to "${normalizedInput}"`);
+    }
+    
+    onSendMessage(finalInput);
     setInput('');
     setTranscript('');
     setShowSuggestions(false);

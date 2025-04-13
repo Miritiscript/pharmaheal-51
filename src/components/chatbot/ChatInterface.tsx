@@ -8,6 +8,7 @@ import ChatMessage from './ChatMessage';
 import LoadingMessage from './LoadingMessage';
 import ChatInput from './ChatInput';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 const LOCAL_STORAGE_KEY = 'pharmacy-chat-history';
 
@@ -50,7 +51,7 @@ const ChatInterface: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const chatWindowRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   // Auto-scroll to bottom of chat when new messages arrive
   useEffect(() => {
@@ -101,7 +102,7 @@ const ChatInterface: React.FC = () => {
 
   const handleSendMessage = async (input: string) => {
     if (!input.trim()) {
-      toast({
+      uiToast({
         title: "Invalid Input",
         description: "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.",
         variant: "destructive",
@@ -135,23 +136,28 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error('Error getting pharmacy response:', error);
       
-      // Add error message to chat with specific guidance
-      const errorMessage: Message = {
+      let errorMessage: string;
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.";
+      }
+      
+      // Add error message to chat
+      const errorMsg: Message = {
         id: uuidv4(),
-        content: error instanceof Error 
-          ? error.message 
-          : "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.",
+        content: errorMessage,
         isUser: false,
         timestamp: new Date(),
       };
       
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMsg]);
       
-      toast({
+      toast.error(errorMessage, { duration: 5000 });
+      uiToast({
         title: "Error",
-        description: error instanceof Error 
-          ? error.message 
-          : "Failed to get a response. Please try again with a valid medical query.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -170,6 +176,8 @@ const ChatInterface: React.FC = () => {
         timestamp: new Date(),
       },
     ]);
+    
+    toast.success("Chat has been reset", { duration: 3000 });
   };
 
   return (

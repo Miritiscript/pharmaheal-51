@@ -1,5 +1,5 @@
 
-import React from 'react';
+import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
@@ -28,6 +28,7 @@ rootElement.style.height = "100vh";
 rootElement.style.margin = "0";
 rootElement.style.padding = "0";
 
+// Use createRoot API to mount the app
 createRoot(rootElement).render(
   <React.StrictMode>
     <App />

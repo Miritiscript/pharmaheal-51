@@ -16,9 +16,6 @@ const Videos: React.FC = () => {
     // Log that we're starting preload
     console.log("Starting image preload process");
     
-    // Show a loading toast
-    toast.info("Loading video assets...");
-    
     // Preload locally uploaded images as fallbacks
     try {
       preloadImages(LOCAL_FALLBACK_IMAGES);
@@ -46,24 +43,18 @@ const Videos: React.FC = () => {
           console.log(`Preloaded ${succeeded} out of ${verifyImages.length} images`);
           setImagesPreloaded(true);
           
-          if (succeeded > 0) {
-            toast.success(`Image assets loaded successfully (${succeeded}/${verifyImages.length})`);
-          } else {
+          if (succeeded === 0) {
             toast.error("Failed to preload image assets. Some videos may not display correctly.");
           }
         });
     } catch (error) {
       console.error("Image preloading error:", error);
-      toast.error("Error preloading images. Using fallbacks.");
       setImagesPreloaded(true);
     }
     
     // Handle unhandled promise rejections that might be related to image loading
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);
-      if (event.reason?.toString().includes('thumbnail') || event.reason?.toString().includes('img')) {
-        toast.error('Some video thumbnails failed to load. Using fallback images instead.');
-      }
     };
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
@@ -73,7 +64,6 @@ const Videos: React.FC = () => {
       const target = event.target as HTMLElement;
       if (target && target.tagName === 'IMG') {
         console.warn('Image load error:', event);
-        toast.info("Some images couldn't load. Using local backups.");
       }
     };
     

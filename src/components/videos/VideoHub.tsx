@@ -9,7 +9,6 @@ import { fetchVideoCategories } from '@/services/youtubeService';
 import VideoSkeleton from './VideoSkeleton';
 import { toast } from 'sonner';
 import SearchBar from '../search/SearchBar';
-import { searchContent } from '@/services/searchService';
 import { Button } from '../ui/Button';
 import { Filter } from 'lucide-react';
 import { LOCAL_FALLBACK_IMAGES, preloadImages } from '@/utils/imageUtils';
@@ -43,20 +42,19 @@ const VideoHub: React.FC = () => {
         if (fetchedCategories && fetchedCategories.length > 0) {
           setCategories(fetchedCategories);
           setFilteredCategories(fetchedCategories);
-          toast.success("Videos loaded successfully");
+          // Toast already displayed in the API call
         } else {
           // If no videos were returned, fallback to mock data
           console.warn("No videos returned from API, using mock data");
           setCategories(mockCategories);
           setFilteredCategories(mockCategories);
-          toast.info("Using demo videos");
         }
       } catch (error) {
         console.error("Error loading videos:", error);
         // Fallback to mock data already handled in service
         setCategories(mockCategories);
         setFilteredCategories(mockCategories);
-        toast.error("Couldn't load live videos, using cached data instead");
+        toast.error("Couldn't load videos, using cached data instead");
       } finally {
         setIsLoading(false);
       }
@@ -129,16 +127,6 @@ const VideoHub: React.FC = () => {
     });
     
     setFilteredCategories(searchResultCategories);
-    
-    // Provide feedback about search results
-    if (searchResultCategories.length === 0) {
-      toast.info(`No videos found matching "${query}"`);
-    } else {
-      const totalVideos = searchResultCategories.reduce(
-        (sum, category) => sum + category.videos.length, 0
-      );
-      toast.success(`Found ${totalVideos} videos matching "${query}"`);
-    }
   };
 
   const filterCategories = (filterId: string | null) => {

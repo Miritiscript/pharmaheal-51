@@ -119,4 +119,3 @@ export const getBestYouTubeThumbnail = (videoId: string): string => {
   // Return the highest quality URL - the component will handle fallback if it fails
   return thumbnailUrls[0];
 };
-

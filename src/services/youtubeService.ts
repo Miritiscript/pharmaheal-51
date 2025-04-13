@@ -61,7 +61,7 @@ const formatDuration = (isoDuration: string): string => {
 };
 
 // Fetch videos from YouTube for a specific category
-const fetchYouTubeVideosForCategory = async (categoryName: string, maxResults = 8): Promise<any[]> => {
+const fetchYouTubeVideosForCategory = async (categoryName: string, maxResults = 12): Promise<any[]> => {
   try {
     // Search for videos in the category
     const searchQuery = `${categoryName} health education`;
@@ -72,7 +72,6 @@ const fetchYouTubeVideosForCategory = async (categoryName: string, maxResults = 
     
     if (!response.ok) {
       console.error("YouTube API search error:", data);
-      toast.error(`YouTube API error: ${data.error?.message || 'Unknown error'}`);
       throw new Error(data.error?.message || "Error fetching videos");
     }
     
@@ -122,7 +121,6 @@ const fetchYouTubeVideosForCategory = async (categoryName: string, maxResults = 
     });
   } catch (error) {
     console.error(`Error fetching YouTube videos for '${categoryName}':`, error);
-    toast.error(`Failed to load videos for ${categoryName}. Using fallbacks.`);
     return [];
   }
 };
@@ -170,7 +168,6 @@ export const searchYouTubeVideos = async (query: string, maxResults = 8): Promis
     }
   } catch (error) {
     console.error("Error in YouTube search:", error);
-    toast.error("Search failed. Using cached results.");
     
     // Fall back to mock data on error
     return {
@@ -202,7 +199,6 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   try {
     if (useYouTubeAPI && YOUTUBE_API_KEY) {
       console.log("Using YouTube Data API to fetch video categories");
-      toast.info("Loading videos from YouTube...");
       
       // Define the categories we want to fetch
       const categoriesToFetch = [
@@ -212,7 +208,7 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
       
       // Fetch videos for each category in parallel
       const categoryPromises = categoriesToFetch.map(async category => {
-        const youtubeVideos = await fetchYouTubeVideosForCategory(category.title, 8);
+        const youtubeVideos = await fetchYouTubeVideosForCategory(category.title, 12);
         
         // Convert YouTube response to our Video format
         const videos = youtubeVideos.map((item: any) => {
@@ -229,6 +225,8 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
             duration: item.contentDetails?.duration || "Preview",
             category: category.title,
             description: item.snippet.description || `Educational video about ${category.title.toLowerCase()}`,
+            views: item.statistics?.viewCount || "0",
+            channelTitle: item.snippet.channelTitle
           };
         });
         
@@ -248,12 +246,11 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
       const totalVideos = loadedCategories.reduce((sum, cat) => sum + cat.videos.length, 0);
       
       if (totalVideos > 0) {
-        toast.success(`Loaded ${totalVideos} videos from YouTube`);
+        toast.success(`Videos loaded successfully`);
         return loadedCategories;
       } else {
         // If no videos were found, fall back to mock data
         console.warn("No videos found with YouTube API, using mock data");
-        toast.warning("Could not load videos from YouTube. Using sample videos.");
         return mockCategories;
       }
     } else {
@@ -275,12 +272,11 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
       // Simulate a slight delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      toast.success("Demo videos loaded successfully");
+      toast.success("Videos loaded successfully");
       return categoriesWithLocalImages;
     }
   } catch (error) {
     console.error("Failed to fetch video categories:", error);
-    toast.error("Failed to load videos from YouTube. Using cached data.");
     
     // Return mock data with local images on error
     return mockCategories.map(category => {
@@ -304,4 +300,3 @@ export const setUseYouTubeAPI = (useAPI: boolean) => {
 
 // Import mock categories at the end to avoid circular dependencies
 import { mockCategories } from "@/data/mockVideos";
-

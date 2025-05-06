@@ -5,7 +5,7 @@ import { MEDICAL_KEYWORDS, MEDICAL_TERMINOLOGY_EXTENDED } from './medicalTerms';
 // Combined list of all medical terms for validation
 const allMedicalTerms = [
   ...Object.keys(diseaseAliasesMap),
-  ...Object.values(diseaseAliasesMap),
+  ...Object.values(diseaseAliasesMap).flat(),
   ...MEDICAL_KEYWORDS,
   ...MEDICAL_TERMINOLOGY_EXTENDED,
   ...medicalSpecialties,
@@ -28,7 +28,19 @@ const healthQuestionPatterns = [
   /side effects/i,
   /drug interaction/i,
   /dosage/i,
-  /safe (to|for)/i
+  /safe (to|for)/i,
+  // Additional more lenient patterns
+  /pain/i,
+  /treatment/i,
+  /medicine/i,
+  /doctor/i,
+  /hospital/i,
+  /symptom/i,
+  /disease/i,
+  /health/i,
+  /sick/i,
+  /cure/i,
+  /remedy/i
 ];
 
 /**
@@ -36,15 +48,15 @@ const healthQuestionPatterns = [
  * Validates if a query is medical-related by checking for medical terms and patterns
  */
 export const isValidMedicalQuery = (query: string): boolean => {
-  // Default to accepting the query
+  // Default to accepting the query if empty
   if (!query || query.trim().length < 2) {
     return false;
   }
 
   const normalizedQuery = query.toLowerCase().trim();
   
-  // Accept all queries with at least 3 words, assuming they are valid
-  if (normalizedQuery.split(/\s+/).length >= 3) {
+  // Accept all queries with at least 2 words, assuming they are valid
+  if (normalizedQuery.split(/\s+/).length >= 2) {
     return true;
   }
 
@@ -74,8 +86,8 @@ export const isValidMedicalQuery = (query: string): boolean => {
   }
 
   // Default to accepting queries to avoid false negatives
-  if (normalizedQuery.length > 10) {
-    console.log('Query accepted based on length (> 10 characters)');
+  if (normalizedQuery.length > 3) {
+    console.log('Query accepted based on length (> 3 characters)');
     return true;
   }
 
@@ -124,3 +136,4 @@ export const expandMedicalQuery = (query: string): string => {
   
   return expandedQuery;
 };
+

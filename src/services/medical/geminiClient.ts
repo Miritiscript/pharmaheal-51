@@ -45,33 +45,44 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
 // Check if a query is medically relevant
 export const checkMedicalRelevance = async (query: string): Promise<boolean> => {
   try {
-    const relevanceCheckPrompt = `
-You are a medical relevance filter.
-
-Determine if the following user query is related to any of the following categories:
-- Human health
-- Diseases
-- Medications
-- Side effects
-- Drug indications or contraindications
-- Natural or herbal remedies
-- Nutrition and wellness
-
-Respond only with:
-"Yes" - if it's clearly related to the above topics.
-"No" - if it's unrelated or not medical in nature.
-
-Query: "${query}"
-Your answer: `;
-
-    const response = await callGeminiAPI(relevanceCheckPrompt);
-    console.log("Medical relevance check response:", response);
+    // Import the relevance check prompt from config
+    const { RELEVANCE_CHECK_PROMPT } = await import('./geminiConfig');
     
-    // Check if the response contains "Yes"
-    return response.trim().toLowerCase().includes("yes");
+    // Replace the placeholder with the actual query
+    const relevanceCheckPrompt = RELEVANCE_CHECK_PROMPT.replace("{query}", query);
+    
+    // Log the prompt for debugging
+    console.log("Sending relevance check prompt:", relevanceCheckPrompt);
+    
+    // Call the Gemini API with the relevance check prompt
+    const response = await callGeminiAPI(relevanceCheckPrompt);
+    console.log("Raw relevance check response:", response);
+    
+    // Try to parse the response as JSON first
+    try {
+      const parsed = JSON.parse(response.trim());
+      console.log("Parsed JSON response:", parsed);
+      
+      // Check if the isRelevant field is true
+      if (parsed && typeof parsed.isRelevant === 'boolean') {
+        return parsed.isRelevant;
+      }
+    } catch (jsonError) {
+      console.warn("Failed to parse relevance check response as JSON:", jsonError);
+      // Fallback to text-based checking if JSON parsing fails
+    }
+    
+    // Fallback: Check if the response contains "Yes" (case-insensitive)
+    const isRelevant = response.trim().toLowerCase().includes("yes") || 
+                      response.trim().toLowerCase().includes("true") ||
+                      response.includes('"isRelevant": true');
+    
+    console.log("Relevance check result (after fallback):", isRelevant);
+    return isRelevant;
   } catch (error) {
     console.error("Error checking medical relevance:", error);
-    // Default to accepting the query if there's an error
+    // Default to accepting the query if there's an error with the API
     return true;
   }
 };
+

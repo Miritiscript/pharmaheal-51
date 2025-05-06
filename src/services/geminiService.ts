@@ -66,7 +66,9 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
     // Check relevance using Gemini API
+    console.log("Checking query relevance with Gemini API:", normalizedQuery);
     const isRelevant = await checkMedicalRelevance(normalizedQuery);
+    console.log("Gemini relevance check result:", isRelevant);
     
     if (!isRelevant) {
       // Even if Gemini says query isn't relevant, check if it's been rejected multiple times
@@ -75,9 +77,19 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
         // If user has tried multiple times with same query, allow it to pass through
         console.log(`Allowing previously rejected query after multiple attempts: ${query}`);
       } else {
-        throw new Error(
-          "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
-        );
+        // Also do a backup check with our local validator as a safety net
+        const localValidation = isValidMedicalQuery(normalizedQuery);
+        console.log("Local relevance validation result:", localValidation);
+        
+        if (!localValidation) {
+          console.log("Query rejected by both validators:", normalizedQuery);
+          throw new Error(
+            "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
+          );
+        } else {
+          console.log("Local validator overrode Gemini rejection:", normalizedQuery);
+          // Continue processing even though Gemini said no
+        }
       }
     }
     
@@ -161,3 +173,4 @@ function trackInteraction(query: string) {
     oldestQueries.forEach(q => delete interactionTracker[q]);
   }
 }
+

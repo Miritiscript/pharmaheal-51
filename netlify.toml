@@ -33,24 +33,10 @@
   for = "/*"
   [headers.values]
     Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.googleusercontent.com https://*.unsplash.com https://img.youtube.com https://i.ytimg.com blob: /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com https://www.youtube.com;"
-    # Add additional headers for better security and performance
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
 # Force HTTPS for all connections
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# New plugin to ensure build cache is cleared for each deployment
-[[plugins]]
-  package = "@netlify/plugin-gatsby"
-
-# Command to run after each successful build - optional for notifications
-[build.environment]
-  NODE_VERSION = "18"
-
-# Make sure CI builds always have fresh dependencies
-[build.processing]
-  skip_processing = false
+# REMOVED Next.js plugin which was causing the error

@@ -32,6 +32,7 @@ const healthQuestionPatterns = [
 ];
 
 /**
+ * Legacy validation function - now used as backup to Gemini classification
  * Validates if a query is medical-related by checking for medical terms and patterns
  */
 export const isValidMedicalQuery = (query: string): boolean => {

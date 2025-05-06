@@ -31,7 +31,7 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 };
 
-// Add generateGeminiContent function
+// Generate content using main medical prompt
 export const generateGeminiContent = async (query: string): Promise<{ text: string }> => {
   try {
     const response = await callGeminiAPI(query);
@@ -39,5 +39,39 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
   } catch (error) {
     console.error("Failed to generate Gemini content:", error);
     throw error;
+  }
+};
+
+// Check if a query is medically relevant
+export const checkMedicalRelevance = async (query: string): Promise<boolean> => {
+  try {
+    const relevanceCheckPrompt = `
+You are a medical relevance filter.
+
+Determine if the following user query is related to any of the following categories:
+- Human health
+- Diseases
+- Medications
+- Side effects
+- Drug indications or contraindications
+- Natural or herbal remedies
+- Nutrition and wellness
+
+Respond only with:
+"Yes" - if it's clearly related to the above topics.
+"No" - if it's unrelated or not medical in nature.
+
+Query: "${query}"
+Your answer: `;
+
+    const response = await callGeminiAPI(relevanceCheckPrompt);
+    console.log("Medical relevance check response:", response);
+    
+    // Check if the response contains "Yes"
+    return response.trim().toLowerCase().includes("yes");
+  } catch (error) {
+    console.error("Error checking medical relevance:", error);
+    // Default to accepting the query if there's an error
+    return true;
   }
 };

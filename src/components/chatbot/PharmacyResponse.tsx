@@ -10,6 +10,7 @@ interface PharmacyResponseProps {
 const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
   // Check if the response indicates an unsupported or irrelevant query
   if (response.text?.includes("not a valid medical query") || 
+      response.isRelevant === false ||
       !response.categories || 
       Object.keys(response.categories).length === 0) {
     return (

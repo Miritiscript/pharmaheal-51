@@ -1,5 +1,5 @@
 
-import { generateGeminiContent } from './medical/geminiClient';
+import { generateGeminiContent, checkMedicalRelevance } from './medical/geminiClient';
 import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
 import { diseaseAliasesMap } from './medical/diseaseAliases';
 import { enhanceGeminiResponse } from './medical/responseParser';
@@ -22,6 +22,32 @@ export interface GeminiResponse {
     herbalAlternatives?: string;
     foodBasedTreatments?: string;
   };
+  isRelevant?: boolean;
+}
+
+// Medical abbreviation synonyms for preprocessing
+const medicalSynonyms: Record<string, string> = {
+  "bp": "blood pressure",
+  "htn": "hypertension",
+  "dm": "diabetes mellitus",
+  "diab": "diabetes",
+  "meds": "medications",
+  "rx": "prescription",
+  "prn": "as needed",
+  "otc": "over the counter",
+  "gi": "gastrointestinal",
+  "cv": "cardiovascular"
+};
+
+// Function to normalize query with medical synonyms
+function normalizeQuery(query: string): string {
+  let normalized = query.toLowerCase().trim();
+  
+  for (const abbr in medicalSynonyms) {
+    normalized = normalized.replace(new RegExp(`\\b${abbr}\\b`, 'gi'), medicalSynonyms[abbr]);
+  }
+  
+  return normalized;
 }
 
 // Dictionary to track interaction info
@@ -35,27 +61,32 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     // Track interaction for this query
     trackInteraction(query);
     
-    // Validate if the query is medical-related
-    if (!isValidMedicalQuery(query)) {
-      // Even if query seems invalid, check if it's been rejected multiple times
-      const interaction = interactionTracker[query.toLowerCase().trim()];
+    // Normalize the query with medical synonyms
+    const normalizedQuery = normalizeQuery(query);
+    console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
+    
+    // Check relevance using Gemini API
+    const isRelevant = await checkMedicalRelevance(normalizedQuery);
+    
+    if (!isRelevant) {
+      // Even if Gemini says query isn't relevant, check if it's been rejected multiple times
+      const interaction = interactionTracker[normalizedQuery];
       if (interaction && interaction.count > 2) {
         // If user has tried multiple times with same query, allow it to pass through
         console.log(`Allowing previously rejected query after multiple attempts: ${query}`);
       } else {
         throw new Error(
-          "Please enter a valid medical query. Try asking about symptoms, medications, treatments, or specific health conditions."
+          "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
         );
       }
     }
     
-    // Standardize medical terms in the query
-    const normalizedQuery = query.toLowerCase();
-    let enhancedQuery = query;
+    // Enhance the query with standard medical terms
+    let enhancedQuery = normalizedQuery;
     
     // Check if any words in the query match disease aliases and enhance with standard terms
     Object.keys(diseaseAliasesMap).forEach(alias => {
-      if (normalizedQuery.includes(alias)) {
+      if (normalizedQuery.includes(alias.toLowerCase())) {
         const standardTerm = diseaseAliasesMap[alias];
         if (!normalizedQuery.includes(standardTerm.toLowerCase())) {
           enhancedQuery += ` (${standardTerm})`;
@@ -77,6 +108,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       query: query,
       enhancedQuery: enhancedQuery,
       timestamp: new Date(),
+      isRelevant: isRelevant,
       // Extract key medical terms that matched in the query
       medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
         normalizedQuery.includes(term.toLowerCase())
@@ -117,11 +149,11 @@ function trackInteraction(query: string) {
   // Keep only the 100 most recent interactions
   const queries = Object.keys(interactionTracker);
   if (queries.length > 100) {
-    // Delete the oldest interactions - Fix arithmetic operation errors
+    // Delete the oldest interactions
     const oldestQueries = queries
       .sort((a, b) => {
-        const dateA = interactionTracker[a].lastRejectedAt ? interactionTracker[a].lastRejectedAt!.getTime() : 0;
-        const dateB = interactionTracker[b].lastRejectedAt ? interactionTracker[b].lastRejectedAt!.getTime() : 0;
+        const dateA = interactionTracker[a].lastRejectedAt?.getTime() || 0;
+        const dateB = interactionTracker[b].lastRejectedAt?.getTime() || 0;
         return dateA - dateB;
       })
       .slice(0, queries.length - 100);

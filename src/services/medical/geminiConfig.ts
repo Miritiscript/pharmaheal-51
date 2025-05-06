@@ -49,3 +49,23 @@ If no food-based treatments exist, state: "• No scientifically-backed food-bas
 
 Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
 Include a medical disclaimer.`;
+
+// Simplified relevance check prompt
+export const RELEVANCE_CHECK_PROMPT = `
+You are a medical relevance filter.
+
+Determine if the following user query is related to any of the following categories:
+- Human health
+- Diseases
+- Medications
+- Side effects
+- Drug indications or contraindications
+- Natural or herbal remedies
+- Nutrition and wellness
+
+Respond only with:
+"Yes" - if it's clearly related to the above topics.
+"No" - if it's unrelated or not medical in nature.
+
+Query: "{query}"
+Your answer: `;

@@ -50,24 +50,24 @@ If no food-based treatments exist, state: "• No scientifically-backed food-bas
 Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
 Include a medical disclaimer.`;
 
-// Updated JSON-based relevance check prompt
+// Updated JSON-structured relevance check prompt
 export const RELEVANCE_CHECK_PROMPT = `
-You are a medical relevance filter.
+You are a medical relevance classifier.  
+Given the user's query, decide whether it is a valid medical prompt (disease name/description, drug recommendations, side effects, indications, contraindications, herbal alternatives, or food-based treatments).  
 
-Return a JSON object indicating whether the query below is clearly related to:
-- Human health
-- Diseases or conditions
-- Medications
-- Drug side effects, indications, contraindications
-- Herbal or natural treatments
-- Food or dietary health
+Respond *only* as a JSON object with these exact keys:
+- "isRelevant": boolean  
+- "reason": string  
 
-Respond ONLY with the following JSON format:
-{
-  "isRelevant": true or false,
-  "reason": "brief explanation"
-}
+Examples:
+User query: "Tell me the side effects of ibuprofen."  
+Output: { "isRelevant": true, "reason": "User is asking about drug side effects." }  
 
-Query: "{query}"
+User query: "What's the weather today?"  
+Output: { "isRelevant": false, "reason": "This is not a medical question." }  
+
+Now classify this query:
+\`\`\`
+{query}
+\`\`\`
 `;
-

@@ -55,34 +55,30 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
     console.log("Sending relevance check prompt:", relevanceCheckPrompt);
     
     // Call the Gemini API with the relevance check prompt
-    const response = await callGeminiAPI(relevanceCheckPrompt);
-    console.log("Raw relevance check response:", response);
+    const responseText = await callGeminiAPI(relevanceCheckPrompt);
+    console.log("Raw relevance check response:", responseText);
     
-    // Try to parse the response as JSON first
+    // Parse the JSON response
+    let json: { isRelevant: boolean; reason: string };
     try {
-      const parsed = JSON.parse(response.trim());
-      console.log("Parsed JSON response:", parsed);
+      json = JSON.parse(responseText.trim());
+      console.log("Parsed JSON response:", json);
       
-      // Check if the isRelevant field is true
-      if (parsed && typeof parsed.isRelevant === 'boolean') {
-        return parsed.isRelevant;
-      }
+      // Return the isRelevant boolean directly
+      return json.isRelevant;
     } catch (jsonError) {
       console.warn("Failed to parse relevance check response as JSON:", jsonError);
-      // Fallback to text-based checking if JSON parsing fails
+      
+      // Fall back to the local validator if JSON parsing fails
+      const { isValidMedicalQuery } = await import('./queryValidator');
+      const isRelevant = isValidMedicalQuery(query);
+      
+      console.log("Fallback to local validator result:", isRelevant);
+      return isRelevant;
     }
-    
-    // Fallback: Check if the response contains "Yes" (case-insensitive)
-    const isRelevant = response.trim().toLowerCase().includes("yes") || 
-                      response.trim().toLowerCase().includes("true") ||
-                      response.includes('"isRelevant": true');
-    
-    console.log("Relevance check result (after fallback):", isRelevant);
-    return isRelevant;
   } catch (error) {
     console.error("Error checking medical relevance:", error);
     // Default to accepting the query if there's an error with the API
     return true;
   }
 };
-

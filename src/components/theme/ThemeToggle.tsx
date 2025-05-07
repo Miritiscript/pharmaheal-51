@@ -1,4 +1,6 @@
 
+"use client"
+
 import * as React from 'react';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun } from 'lucide-react';

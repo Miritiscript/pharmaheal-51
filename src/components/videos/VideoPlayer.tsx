@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, Play, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video } from '@/data/mockVideos';
-import { useTheme } from '@/components/theme/ThemeProvider';
+import { useTheme } from 'next-themes';
 import { validateVideoId } from '@/services/youtubeService';
 import { 
   LOCAL_FALLBACK_IMAGES, 
@@ -21,12 +20,10 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos, onVideoClick }) => {
   const { theme } = useTheme();
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
-  const [isClient, setIsClient] = useState(false);
   
   // Preload fallback images to ensure they're in cache
   useEffect(() => {
     preloadImages(LOCAL_FALLBACK_IMAGES);
-    setIsClient(true);
   }, []);
   
   const handleImageError = (videoId: string) => {
@@ -90,33 +87,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
   
   if (!video) return null;
 
-  // Only render YouTube iframe after client-side hydration
-  const renderVideoEmbed = () => {
-    if (!isClient) {
-      return (
-        <div className="relative pb-[56.25%] h-0 bg-gray-200 dark:bg-gray-800 animate-pulse">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span>Loading video...</span>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="relative pb-[56.25%] h-0">
-        <iframe
-          className="absolute top-0 left-0 w-full h-full"
-          src={`https://www.youtube.com/embed/${video.videoId}`}
-          title={video.title}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          loading="lazy"
-        ></iframe>
-      </div>
-    );
-  };
-
   return (
     <div className="mb-8 animate-fade-in">
       <Button 
@@ -132,7 +102,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
       <div className={`glass-card overflow-hidden transition-all duration-300 ${
         theme === 'dark' ? 'bg-gray-900/80 border-gray-800/40' : ''
       }`}>
-        {renderVideoEmbed()}
+        <div className="relative pb-[56.25%] h-0">
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${video.videoId}`}
+            title={video.title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        </div>
         <div className="p-4 lg:p-6">
           <h2 className={`text-xl font-semibold mb-2 ${
             theme === 'dark' ? 'text-white' : ''

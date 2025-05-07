@@ -50,10 +50,8 @@ const ChatInterface: React.FC = () => {
   });
   
   const [isLoading, setIsLoading] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const { toast: uiToast } = useToast();
-  const maxRetries = 2;
 
   // Auto-scroll to bottom of chat when new messages arrive
   useEffect(() => {
@@ -102,23 +100,6 @@ const ChatInterface: React.FC = () => {
     }
   }, [messages, currentChatId]);
 
-  // Retry mechanism for API calls
-  const fetchWithRetry = async (input: string, retryAttempt = 0): Promise<any> => {
-    try {
-      setRetryCount(retryAttempt);
-      return await generatePharmacyResponse(input);
-    } catch (error) {
-      if (retryAttempt < maxRetries) {
-        console.log(`Retry attempt ${retryAttempt + 1} for query: "${input}"`);
-        // Wait a bit longer between each retry
-        const delay = (retryAttempt + 1) * 1000;
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchWithRetry(input, retryAttempt + 1);
-      }
-      throw error;
-    }
-  };
-
   const handleSendMessage = async (input: string) => {
     if (!input.trim()) {
       uiToast({
@@ -138,11 +119,10 @@ const ChatInterface: React.FC = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    setRetryCount(0);
 
     try {
-      // Call Gemini API for pharmacy information with retry mechanism
-      const pharmacyResponse = await fetchWithRetry(input);
+      // Call Gemini API for pharmacy information
+      const pharmacyResponse = await generatePharmacyResponse(input);
       
       const aiResponse: Message = {
         id: uuidv4(),
@@ -153,11 +133,6 @@ const ChatInterface: React.FC = () => {
       };
       
       setMessages(prev => [...prev, aiResponse]);
-      
-      // Show success toast if we had to retry
-      if (retryCount > 0) {
-        toast.success("Response generated successfully after retry", { duration: 2000 });
-      }
     } catch (error) {
       console.error('Error getting pharmacy response:', error);
       
@@ -179,7 +154,7 @@ const ChatInterface: React.FC = () => {
       
       setMessages(prev => [...prev, errorMsg]);
       
-      toast.error("Error generating response", { duration: 5000 });
+      toast.error(errorMessage, { duration: 5000 });
       uiToast({
         title: "Error",
         description: errorMessage,
@@ -213,9 +188,7 @@ const ChatInterface: React.FC = () => {
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
-        {isLoading && (
-          <LoadingMessage retryCount={retryCount} />
-        )}
+        {isLoading && <LoadingMessage />}
       </div>
 
       <ChatInput 

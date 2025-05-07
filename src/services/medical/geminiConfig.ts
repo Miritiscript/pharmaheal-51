@@ -1,7 +1,7 @@
 
 export const GEMINI_CONFIG = {
   API_KEY: "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY",
-  API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
+  API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
   DEFAULT_PARAMS: {
     temperature: 0.4,
     topK: 32,
@@ -11,7 +11,7 @@ export const GEMINI_CONFIG = {
 } as const;
 
 export const MEDICAL_PROMPT_TEMPLATE = `
-As a medical AI assistant, provide comprehensive information about: "{query}"
+You are a medical AI assistant providing information to a patient about: "{query}"
 
 Format your response with these sections using bullet points:
 
@@ -48,9 +48,9 @@ Format your response with these sections using bullet points:
 If no food-based treatments exist, state: "• No scientifically-backed food-based treatments found for this condition."
 
 Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
-Include a medical disclaimer.`;
+Include a medical disclaimer at the end.`;
 
-// Updated JSON-structured relevance check prompt
+// JSON-structured relevance check prompt
 export const RELEVANCE_CHECK_PROMPT = `
 You are a medical relevance classifier.  
 Given the user's query, decide whether it is a valid medical prompt (disease name/description, drug recommendations, side effects, indications, contraindications, herbal alternatives, or food-based treatments).  

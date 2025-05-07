@@ -65,6 +65,15 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const normalizedQuery = normalizeQuery(query);
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
+    // For suggested prompts or common medical terms, bypass relevance check
+    if (isSuggestedPrompt(query) || containsCommonMedicalTerms(query)) {
+      console.log("Bypassing relevance check for common medical query:", query);
+      const isRelevant = true;
+      
+      // Continue with query processing using the bypass path
+      return processValidQuery(query, normalizedQuery, isRelevant);
+    }
+    
     // Check relevance using Gemini API
     console.log("Checking query relevance with Gemini API:", normalizedQuery);
     const isRelevant = await checkMedicalRelevance(normalizedQuery);
@@ -76,42 +85,62 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       if (interaction && interaction.count > 2) {
         // If user has tried multiple times with same query, allow it to pass through
         console.log(`Allowing previously rejected query after multiple attempts: ${query}`);
+        return processValidQuery(query, normalizedQuery, false);
       } else {
         // Also do a backup check with our local validator as a safety net
         const localValidation = isValidMedicalQuery(normalizedQuery);
         console.log("Local relevance validation result:", localValidation);
         
-        if (!localValidation) {
+        if (localValidation) {
+          console.log("Local validator overrode Gemini rejection:", normalizedQuery);
+          // Continue processing even though Gemini said no
+          return processValidQuery(query, normalizedQuery, true);
+        } else {
           console.log("Query rejected by both validators:", normalizedQuery);
           throw new Error(
             "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
           );
-        } else {
-          console.log("Local validator overrode Gemini rejection:", normalizedQuery);
-          // Continue processing even though Gemini said no
         }
       }
     }
     
-    // Enhance the query with standard medical terms
-    let enhancedQuery = normalizedQuery;
+    // Process the valid query
+    return processValidQuery(query, normalizedQuery, isRelevant);
     
-    // Check if any words in the query match disease aliases and enhance with standard terms
-    Object.keys(diseaseAliasesMap).forEach(alias => {
-      if (normalizedQuery.includes(alias.toLowerCase())) {
-        const standardTerm = diseaseAliasesMap[alias];
-        if (!normalizedQuery.includes(standardTerm.toLowerCase())) {
-          enhancedQuery += ` (${standardTerm})`;
-        }
+  } catch (error) {
+    console.error("Error generating pharmacy response:", error);
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("An unexpected error occurred while processing your request.");
+    }
+  }
+};
+
+/**
+ * Process a query that has been validated as medically relevant
+ */
+async function processValidQuery(query: string, normalizedQuery: string, isRelevant: boolean): Promise<GeminiResponse> {
+  // Enhance the query with standard medical terms
+  let enhancedQuery = normalizedQuery;
+  
+  // Check if any words in the query match disease aliases and enhance with standard terms
+  Object.keys(diseaseAliasesMap).forEach(alias => {
+    if (normalizedQuery.includes(alias.toLowerCase())) {
+      const standardTerm = diseaseAliasesMap[alias];
+      if (!normalizedQuery.includes(standardTerm.toLowerCase())) {
+        enhancedQuery += ` (${standardTerm})`;
       }
-    });
-    
-    // Further expand the query with related medical terms
-    const expandedQuery = expandMedicalQuery(enhancedQuery);
-    
-    // Get AI-generated content using the enhanced and expanded query
-    console.log(`Processing medical query: ${expandedQuery}`);
-    
+    }
+  });
+  
+  // Further expand the query with related medical terms
+  const expandedQuery = expandMedicalQuery(enhancedQuery);
+  
+  // Get AI-generated content using the enhanced and expanded query
+  console.log(`Processing medical query: ${expandedQuery}`);
+  
+  try {
     const response = await generateGeminiContent(expandedQuery);
     
     // Build the initial response
@@ -134,14 +163,10 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const enhancedResponse = enhanceGeminiResponse(initialResponse);
     return enhancedResponse;
   } catch (error) {
-    console.error("Error generating pharmacy response:", error);
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error("An unexpected error occurred while processing your request.");
-    }
+    console.error("Error generating Gemini content:", error);
+    throw new Error("There was an error generating medical content. Please try again or rephrase your query.");
   }
-};
+}
 
 /**
  * Tracks interaction data for a query to improve response handling
@@ -174,3 +199,49 @@ function trackInteraction(query: string) {
   }
 }
 
+/**
+ * Check if a query matches one of our suggested prompts
+ */
+function isSuggestedPrompt(query: string): boolean {
+  const suggestedPrompts = [
+    "what are the side effects of ibuprofen",
+    "best treatments for migraine",
+    "drug interactions with warfarin",
+    "herbal remedies for anxiety",
+    "foods to avoid with high blood pressure",
+  ];
+
+  const normalizedQuery = query.toLowerCase().replace(/[?.,!]/g, '').trim();
+  
+  for (const prompt of suggestedPrompts) {
+    if (normalizedQuery.includes(prompt.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a query contains common medical terms
+ */
+function containsCommonMedicalTerms(query: string): boolean {
+  const commonTerms = [
+    "medication", "drug", "medicine", "treatment", "symptom", "disease", 
+    "condition", "side effect", "interaction", "dosage", "prescription", 
+    "migraine", "headache", "pain", "blood pressure", "diabetes", "hypertension",
+    "covid", "cancer", "heart", "liver", "kidney", "lung", "brain", "chronic",
+    "acute", "therapy", "diagnosis", "prognosis", "contraindication", "allergy", 
+    "reaction", "overdose", "withdrawal", "herbal", "supplement", "vitamin"
+  ];
+
+  const normalizedQuery = query.toLowerCase();
+  
+  for (const term of commonTerms) {
+    if (normalizedQuery.includes(term)) {
+      return true;
+    }
+  }
+  
+  return false;
+}

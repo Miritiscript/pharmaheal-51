@@ -3,17 +3,17 @@ export const GEMINI_CONFIG = {
   API_KEY: "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY",
   API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
   DEFAULT_PARAMS: {
-    temperature: 0.4,
+    temperature: 0.6,  // Increased temperature slightly for more diverse responses
     topK: 32,
-    topP: 0.95,
-    maxOutputTokens: 1024,
+    topP: 1.0,         // Increased to maximum for wider response distribution
+    maxOutputTokens: 2048,  // Increased token limit for more comprehensive responses
   },
-  MAX_RETRIES: 2,
-  RETRY_DELAY: 1000 // ms
+  MAX_RETRIES: 3,      // Increased retries
+  RETRY_DELAY: 1500    // Increased delay between retries
 } as const;
 
 export const MEDICAL_PROMPT_TEMPLATE = `
-As a medical AI assistant, provide comprehensive information about: "{query}"
+As a comprehensive medical AI assistant, provide detailed information about: "{query}"
 
 Format your response with these sections using bullet points:
 
@@ -50,29 +50,18 @@ Format your response with these sections using bullet points:
 If no food-based treatments exist, state: "• No scientifically-backed food-based treatments found for this condition."
 
 Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
-Include a medical disclaimer.`;
+Include a medical disclaimer.
 
-// Simplified JSON-based relevance check prompt that produces cleaner JSON
+IMPORTANT: Provide information for ANY medical condition or disease asked about, including but not limited to: cancer types (leukemia, lymphoma, etc), rare diseases, chronic conditions, mental health disorders, and infectious diseases.`;
+
+// Updated to produce better structured JSON output
 export const RELEVANCE_CHECK_PROMPT = `
-You are a medical query validator.
+You are a medical query validator that ONLY outputs valid JSON.
 
-Is the query "{query}" related to human health, medical conditions, medications, treatments, or wellness?
+Determine if the query "{query}" is related to human health, medical conditions, medications, treatments, or wellness.
 
-Return ONLY a JSON object with this exact format:
-{
-  "isRelevant": true/false,
-  "reason": "brief explanation"
-}
+Output ONLY a JSON object with exactly this format, no markdown, no comments, no explanations:
+{"isRelevant": true/false, "reason": "brief explanation"}
 
-Example valid response for "aspirin dosage":
-{
-  "isRelevant": true,
-  "reason": "Query is about medication dosage"
-}
-
-Example valid response for "how to bake cookies":
-{
-  "isRelevant": false,
-  "reason": "Query is about cooking, not medical"
-}
+For ANY disease, condition name, or medication name, the answer should ALWAYS be {"isRelevant": true, "reason": "Query is about a medical condition"}.
 `;

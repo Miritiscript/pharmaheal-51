@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { Play, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video, VideoCategory } from '@/data/mockVideos';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/components/theme/ThemeProvider';
 import { validateVideoId } from '@/services/youtubeService';
 import { 
   getBestYouTubeThumbnail,

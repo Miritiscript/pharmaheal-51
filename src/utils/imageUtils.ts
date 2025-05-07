@@ -57,21 +57,11 @@ export const fixYouTubeThumbnailUrl = (videoId: string): string => {
   }
   
   try {
-    // Try to construct a valid YouTube thumbnail URL
-    const ytThumbnailUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-    
-    // Return the YouTube thumbnail URL first, with local fallback in the component's onError
-    return ytThumbnailUrl;
+    // Always ensure we use HTTPS
+    return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
   } catch (error) {
     console.error("Error creating YouTube thumbnail URL:", error);
-    // Get a local fallback image as backup
-    const hashCode = videoId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    const index = Math.abs(hashCode) % LOCAL_FALLBACK_IMAGES.length;
-    return LOCAL_FALLBACK_IMAGES[index];
+    return LOCAL_FALLBACK_IMAGES[0];
   }
 };
 
@@ -81,9 +71,13 @@ export const ensureSecureImageUrl = (url: string): string => {
     return FALLBACK_IMAGES[0];
   }
   
-  // If it's a YouTube image URL
+  // If it's a YouTube image URL, ensure HTTPS
   if (url.includes('ytimg.com') || url.includes('youtube.com')) {
-    return url; // YouTube URLs are already HTTPS
+    // Convert HTTP to HTTPS for YouTube URLs
+    if (url.startsWith('http:')) {
+      return url.replace('http:', 'https:');
+    }
+    return url; // Already HTTPS
   }
   
   // If it's not a local URL and not YouTube, check if it's HTTPS
@@ -102,20 +96,12 @@ export const ensureSecureImageUrl = (url: string): string => {
   return url;
 };
 
-// Get the best thumbnail for a video ID based on available formats
+// Get the best thumbnail for a video ID using multiple quality options with fallbacks
 export const getBestYouTubeThumbnail = (videoId: string): string => {
   if (!videoId || videoId === 'undefined' || videoId === 'null') {
     return LOCAL_FALLBACK_IMAGES[0];
   }
   
-  // Try several thumbnail qualities in order
-  const thumbnailUrls = [
-    `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`, // HD quality if available
-    `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`, // High quality
-    `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`, // Medium quality
-    `https://img.youtube.com/vi/${videoId}/default.jpg` // Default quality
-  ];
-  
-  // Return the highest quality URL - the component will handle fallback if it fails
-  return thumbnailUrls[0];
+  // Always use HTTPS for YouTube thumbnails
+  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 };

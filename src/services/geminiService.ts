@@ -23,6 +23,7 @@ export interface GeminiResponse {
     foodBasedTreatments?: string;
   };
   isRelevant?: boolean;
+  error?: string;
 }
 
 // Medical abbreviation synonyms for preprocessing
@@ -58,6 +59,8 @@ const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date 
  */
 export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
   try {
+    console.log(`Starting to process query: "${query}"`);
+    
     // Track interaction for this query
     trackInteraction(query);
     
@@ -65,32 +68,32 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const normalizedQuery = normalizeQuery(query);
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
-    // Check relevance using Gemini API
-    console.log("Checking query relevance with Gemini API:", normalizedQuery);
-    const isRelevant = await checkMedicalRelevance(normalizedQuery);
-    console.log("Gemini relevance check result:", isRelevant);
+    // Use our local validator first as a safety check
+    const localValidation = isValidMedicalQuery(normalizedQuery);
+    console.log("Local relevance validation result:", localValidation);
     
-    if (!isRelevant) {
-      // Even if Gemini says query isn't relevant, check if it's been rejected multiple times
-      const interaction = interactionTracker[normalizedQuery];
-      if (interaction && interaction.count > 2) {
-        // If user has tried multiple times with same query, allow it to pass through
-        console.log(`Allowing previously rejected query after multiple attempts: ${query}`);
-      } else {
-        // Also do a backup check with our local validator as a safety net
-        const localValidation = isValidMedicalQuery(normalizedQuery);
-        console.log("Local relevance validation result:", localValidation);
-        
-        if (!localValidation) {
-          console.log("Query rejected by both validators:", normalizedQuery);
-          throw new Error(
-            "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
-          );
-        } else {
-          console.log("Local validator overrode Gemini rejection:", normalizedQuery);
-          // Continue processing even though Gemini said no
-        }
-      }
+    let isRelevant = localValidation; // Default to local validation result
+    
+    // Then verify with Gemini API for more accurate checking
+    try {
+      isRelevant = await checkMedicalRelevance(normalizedQuery);
+      console.log("Gemini relevance check result:", isRelevant);
+    } catch (error) {
+      // If Gemini API fails, fall back to local validation result
+      console.warn("Gemini relevance check failed, using local validation:", error);
+    }
+    
+    // Allow through if:
+    // 1. The query is deemed relevant
+    // 2. OR the user has tried multiple times with the same query
+    const interaction = interactionTracker[normalizedQuery];
+    const allowDueToMultipleAttempts = interaction && interaction.count > 2;
+    
+    if (!isRelevant && !allowDueToMultipleAttempts && !localValidation) {
+      console.log("Query rejected as non-medical:", normalizedQuery);
+      throw new Error(
+        "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
+      );
     }
     
     // Enhance the query with standard medical terms
@@ -108,11 +111,12 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     
     // Further expand the query with related medical terms
     const expandedQuery = expandMedicalQuery(enhancedQuery);
-    
-    // Get AI-generated content using the enhanced and expanded query
     console.log(`Processing medical query: ${expandedQuery}`);
     
+    // Get AI-generated content using the enhanced and expanded query
     const response = await generateGeminiContent(expandedQuery);
+    
+    console.log("Received Gemini response of length:", response.text.length);
     
     // Build the initial response
     const initialResponse: GeminiResponse = {
@@ -132,9 +136,21 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     
     // Enhance the response with parsed categories
     const enhancedResponse = enhanceGeminiResponse(initialResponse);
+    console.log("Enhanced response with categories:", Object.keys(enhancedResponse.categories || {}));
     return enhancedResponse;
   } catch (error) {
     console.error("Error generating pharmacy response:", error);
+    
+    // Create an error response
+    const errorResponse: GeminiResponse = {
+      text: error instanceof Error ? error.message : "An unexpected error occurred",
+      query: query,
+      enhancedQuery: query,
+      timestamp: new Date(),
+      isRelevant: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+    
     if (error instanceof Error) {
       throw error;
     } else {
@@ -173,4 +189,3 @@ function trackInteraction(query: string) {
     oldestQueries.forEach(q => delete interactionTracker[q]);
   }
 }
-

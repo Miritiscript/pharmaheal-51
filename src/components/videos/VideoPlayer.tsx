@@ -21,9 +21,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
   const { theme } = useTheme();
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   
+  // Add client-side only rendering to fix SSR mismatch
+  const [isClient, setIsClient] = useState(false);
+  
   // Preload fallback images to ensure they're in cache
   useEffect(() => {
     preloadImages(LOCAL_FALLBACK_IMAGES);
+    // Mark as client-side rendered
+    setIsClient(true);
   }, []);
   
   const handleImageError = (videoId: string) => {
@@ -54,15 +59,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
     
     // If it's a YouTube video ID, try to get the best thumbnail
     if (validateVideoId(video.videoId)) {
-      // If custom thumbnail is already a YouTube URL, use it
-      if (video.thumbnail && (
-          video.thumbnail.includes('ytimg.com') || 
-          video.thumbnail.includes('youtube.com')
-      )) {
-        return video.thumbnail;
-      }
-      
-      // Otherwise, generate a proper YouTube thumbnail URL
+      // Ensure we're using HTTPS
       return getBestYouTubeThumbnail(video.videoId);
     }
     
@@ -86,6 +83,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
   };
   
   if (!video) return null;
+  
+  // Don't render anything until client-side
+  if (!isClient) {
+    return (
+      <div className="mb-8 animate-fade-in">
+        <div className="flex justify-center items-center p-12">
+          <div className="w-12 h-12 border-4 border-pharma-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-8 animate-fade-in">
@@ -110,6 +118,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            loading="lazy"
           ></iframe>
         </div>
         <div className="p-4 lg:p-6">

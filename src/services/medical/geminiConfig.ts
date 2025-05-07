@@ -7,7 +7,9 @@ export const GEMINI_CONFIG = {
     topK: 32,
     topP: 0.95,
     maxOutputTokens: 1024,
-  }
+  },
+  MAX_RETRIES: 2,
+  RETRY_DELAY: 1000 // ms
 } as const;
 
 export const MEDICAL_PROMPT_TEMPLATE = `
@@ -50,24 +52,27 @@ If no food-based treatments exist, state: "• No scientifically-backed food-bas
 Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
 Include a medical disclaimer.`;
 
-// Updated JSON-based relevance check prompt
+// Simplified JSON-based relevance check prompt that produces cleaner JSON
 export const RELEVANCE_CHECK_PROMPT = `
-You are a medical relevance filter.
+You are a medical query validator.
 
-Return a JSON object indicating whether the query below is clearly related to:
-- Human health
-- Diseases or conditions
-- Medications
-- Drug side effects, indications, contraindications
-- Herbal or natural treatments
-- Food or dietary health
+Is the query "{query}" related to human health, medical conditions, medications, treatments, or wellness?
 
-Respond ONLY with the following JSON format:
+Return ONLY a JSON object with this exact format:
 {
-  "isRelevant": true or false,
+  "isRelevant": true/false,
   "reason": "brief explanation"
 }
 
-Query: "{query}"
-`;
+Example valid response for "aspirin dosage":
+{
+  "isRelevant": true,
+  "reason": "Query is about medication dosage"
+}
 
+Example valid response for "how to bake cookies":
+{
+  "isRelevant": false,
+  "reason": "Query is about cooking, not medical"
+}
+`;

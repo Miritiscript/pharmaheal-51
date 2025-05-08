@@ -2,16 +2,15 @@
 // This file simulates the Supabase Edge Function for local development
 // In production, this would be replaced by the actual Supabase Edge Function
 
-import { Request, Response } from 'express';
-
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request): Promise<Response> {
   try {
-    const { model, messages, temperature, max_tokens, top_p } = req.body;
+    const body = await req.json();
+    const { model, messages, temperature, max_tokens, top_p } = body;
     
     // In a real implementation, this would call the Groq API
     // For this simulation, we'll return a mock response
     
-    res.status(200).json({
+    return new Response(JSON.stringify({
       id: "chatcmpl-mock-id",
       object: "chat.completion",
       created: Date.now(),
@@ -62,9 +61,18 @@ Medical Disclaimer: This information is provided by an AI fallback system and is
         completion_tokens: 500,
         total_tokens: 600
       }
+    }), {
+      headers: {
+        "Content-Type": "application/json"
+      }
     });
   } catch (error) {
     console.error("Error in mock Groq endpoint:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
   }
 }

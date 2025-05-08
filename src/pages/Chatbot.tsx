@@ -20,6 +20,9 @@ const Chatbot: React.FC = () => {
             <p className="text-sm text-muted-foreground mt-2">
               Your chat history is saved automatically. Clear conversations using the reset button.
             </p>
+            <div className="mt-2 text-xs text-muted-foreground bg-secondary/30 p-2 rounded-md inline-block">
+              Powered by Gemini with Llama 3.1 fallback for reliable 24/7 responses
+            </div>
           </div>
           <PageNavigation />
           <ChatInterface />

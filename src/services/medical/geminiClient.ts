@@ -1,5 +1,6 @@
 
 import { GEMINI_CONFIG } from './geminiConfig';
+import { generateGroqContent } from '../groq/groqClient';
 
 /**
  * Calls Gemini API with enhanced retry mechanism for improved reliability
@@ -85,6 +86,7 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
 };
 
 // Generate content using main medical prompt with improved error handling
+// Now with Groq fallback
 export const generateGeminiContent = async (query: string): Promise<{ text: string }> => {
   try {
     // Import the medical prompt template from config
@@ -96,16 +98,33 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
     console.log(`Sending medical query to Gemini: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
     
     // Try to get a response with retries built in
-    const response = await callGeminiAPI(medicalPrompt);
-    return { text: response };
+    try {
+      const response = await callGeminiAPI(medicalPrompt);
+      
+      // Validate the response contains the expected format
+      // This is a simple check to see if the response has bullet points and section headers
+      if (response.includes("•") && 
+          (response.includes("DISEASE DESCRIPTION") || 
+           response.includes("DRUG RECOMMENDATIONS"))) {
+        return { text: response };
+      } else {
+        console.warn("Gemini response does not match expected format, falling back to Groq");
+        throw new Error("Invalid response format");
+      }
+    } catch (geminiError) {
+      console.error("Gemini API failed, falling back to Groq:", geminiError);
+      
+      // If Gemini fails, try Groq as a fallback
+      console.log("Using Groq as fallback for query:", query);
+      return await generateGroqContent(query);
+    }
   } catch (error) {
-    console.error("Failed to generate Gemini content:", error);
+    console.error("Failed to generate content with both Gemini and Groq:", error);
     
-    // Create a more user-friendly fallback response for any error
+    // Ultimate fallback if both providers fail
     if (error instanceof Error) {
-      // If the error is likely due to API issues, provide a helpful fallback response
       return { 
-        text: `I'm sorry, I couldn't retrieve information about your query. The medical AI service is currently experiencing issues.\n\n` +
+        text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
               `1. DISEASE DESCRIPTION\n` +
               `• The system is currently unable to provide details about this condition\n` +
               `• Please try again later or try rephrasing your query\n` +

@@ -1,4 +1,3 @@
-
 import { generateGeminiContent, checkMedicalRelevance } from './medical/geminiClient';
 import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
 import { diseaseAliasesMap } from './medical/diseaseAliases';
@@ -79,7 +78,7 @@ const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date 
 
 /**
  * Processes a pharmacy-related query and returns AI-generated information
- * Completely redesigned to never block valid medical queries
+ * Now with Groq fallback for improved reliability
  */
 export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
   try {
@@ -92,8 +91,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const normalizedQuery = normalizeQuery(query);
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
-    // Step 1: Fast path for known medical queries - bypass all checks
-    // Check if query contains any common disease names - immediate acceptance
+    // Fast path for known medical queries - bypass all checks
     const containsCommonDisease = commonDiseases.some(disease => 
       normalizedQuery.includes(disease)
     );
@@ -102,7 +100,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       console.log("Query contains a common disease name, skipping relevance checks");
     }
     
-    // Step 2: Check for disease aliases in the query - another fast path
+    // Check for disease aliases in the query - another fast path
     const containsDiseaseName = Object.keys(diseaseAliasesMap).some(alias => 
       normalizedQuery.includes(alias.toLowerCase())
     );
@@ -111,14 +109,14 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       console.log("Query contains a disease alias, skipping relevance checks");
     }
     
-    // Step 3: Use our local validator first as a quick check
+    // Use our local validator first as a quick check
     const localValidation = isValidMedicalQuery(normalizedQuery);
     console.log("Local relevance validation result:", localValidation);
     
-    // Step 4: Combine initial checks
+    // Combine initial checks
     let isRelevant = localValidation || containsCommonDisease || containsDiseaseName;
     
-    // Step 5: Check for repeat attempts - users may be frustrated by blocks
+    // Check for repeat attempts - users may be frustrated by blocks
     const interaction = interactionTracker[normalizedQuery];
     const allowDueToMultipleAttempts = interaction && interaction.count > 1;
     
@@ -127,7 +125,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       isRelevant = true;
     }
     
-    // Step 6: Only if the query hasn't been determined to be relevant, 
+    // Only if the query hasn't been determined to be relevant, 
     // check with Gemini API as a more sophisticated check
     if (!isRelevant) {
       try {
@@ -141,7 +139,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       }
     }
     
-    // Step 7: Make final decision on whether to process the query
+    // Make final decision on whether to process the query
     // ONLY reject if ALL checks have determined it's not medical
     // AND this is the first or second attempt
     if (!isRelevant && !allowDueToMultipleAttempts && 
@@ -151,8 +149,6 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
         "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
       );
     }
-    
-    // Step 8: Query passed all checks (or checks were bypassed) - process it
     
     // Enhance the query with standard medical terms
     let enhancedQuery = normalizedQuery;
@@ -171,10 +167,10 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const expandedQuery = expandMedicalQuery(enhancedQuery);
     console.log(`Processing medical query: ${expandedQuery}`);
     
-    // Get AI-generated content using the enhanced and expanded query
+    // Try Gemini with fallback to Groq
     const response = await generateGeminiContent(expandedQuery);
     
-    console.log("Received Gemini response of length:", response.text.length);
+    console.log("Received AI response of length:", response.text.length);
     
     // Build the initial response
     const initialResponse: GeminiResponse = {

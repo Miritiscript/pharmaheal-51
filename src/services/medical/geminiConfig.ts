@@ -54,14 +54,15 @@ Include a medical disclaimer.
 
 IMPORTANT: Provide information for ANY medical condition or disease asked about, including but not limited to: cancer types (leukemia, lymphoma, etc), rare diseases, chronic conditions, mental health disorders, and infectious diseases.`;
 
-// Updated to produce better structured JSON output
+// Updated to produce strictly valid JSON output
 export const RELEVANCE_CHECK_PROMPT = `
 You are a medical query validator that ONLY outputs valid JSON.
 
 Determine if the query "{query}" is related to human health, medical conditions, medications, treatments, or wellness.
 
-Output ONLY a JSON object with exactly this format, no markdown, no comments, no explanations:
+Output ONLY a JSON object in exactly this format — no markdown, no comments, no explanation:
 {"isRelevant": true/false, "reason": "brief explanation"}
 
-For ANY disease, condition name, or medication name, the answer should ALWAYS be {"isRelevant": true, "reason": "Query is about a medical condition"}.
+For any disease, medication, or symptom name, ALWAYS return:
+{"isRelevant": true, "reason": "Query is about a medical topic"}
 `;

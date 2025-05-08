@@ -55,7 +55,12 @@ const medicalSynonyms: Record<string, string> = {
 const commonDiseases = [
   "leukemia", "lymphoma", "melanoma", "alzheimer", "parkinson", 
   "crohn", "lupus", "fibromyalgia", "multiple sclerosis", "ms",
-  "epilepsy", "schizophrenia", "bipolar", "hepatitis", "cirrhosis"
+  "epilepsy", "schizophrenia", "bipolar", "hepatitis", "cirrhosis",
+  // Added more diseases to ensure they're recognized
+  "cancer", "diabetes", "hypertension", "asthma", "arthritis",
+  "pneumonia", "bronchitis", "influenza", "aids", "hiv",
+  "sars", "covid", "coronavirus", "malaria", "tuberculosis",
+  "depression", "anxiety", "adhd", "autism", "dementia"
 ];
 
 // Function to normalize query with medical synonyms
@@ -74,6 +79,7 @@ const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date 
 
 /**
  * Processes a pharmacy-related query and returns AI-generated information
+ * Completely redesigned to never block valid medical queries
  */
 export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
   try {
@@ -86,58 +92,67 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const normalizedQuery = normalizeQuery(query);
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
+    // Step 1: Fast path for known medical queries - bypass all checks
     // Check if query contains any common disease names - immediate acceptance
     const containsCommonDisease = commonDiseases.some(disease => 
       normalizedQuery.includes(disease)
     );
     
     if (containsCommonDisease) {
-      console.log("Query contains a common disease name, accepting as medically relevant");
+      console.log("Query contains a common disease name, skipping relevance checks");
     }
     
-    // Use our local validator first as a safety check
+    // Step 2: Check for disease aliases in the query - another fast path
+    const containsDiseaseName = Object.keys(diseaseAliasesMap).some(alias => 
+      normalizedQuery.includes(alias.toLowerCase())
+    );
+    
+    if (containsDiseaseName) {
+      console.log("Query contains a disease alias, skipping relevance checks");
+    }
+    
+    // Step 3: Use our local validator first as a quick check
     const localValidation = isValidMedicalQuery(normalizedQuery);
     console.log("Local relevance validation result:", localValidation);
     
-    let isRelevant = localValidation || containsCommonDisease; // Accept if either check passes
+    // Step 4: Combine initial checks
+    let isRelevant = localValidation || containsCommonDisease || containsDiseaseName;
     
-    // Then verify with Gemini API for more accurate checking if needed
-    if (!isRelevant) {
-      try {
-        isRelevant = await checkMedicalRelevance(normalizedQuery);
-        console.log("Gemini relevance check result:", isRelevant);
-      } catch (error) {
-        // If Gemini API fails, fall back to local validation result
-        console.warn("Gemini relevance check failed, using local validation:", error);
-        isRelevant = true; // Default to accepting if the check fails
-      }
-    }
+    // Step 5: Check for repeat attempts - users may be frustrated by blocks
+    const interaction = interactionTracker[normalizedQuery];
+    const allowDueToMultipleAttempts = interaction && interaction.count > 1;
     
-    // Always allow disease names through regardless of relevance checks
-    const isDiseaseQuery = query.toLowerCase().split(/\s+/).some(word => {
-      return Object.keys(diseaseAliasesMap).some(alias => 
-        alias.toLowerCase() === word.toLowerCase()
-      );
-    });
-    
-    if (isDiseaseQuery) {
-      console.log("Query contains disease name, overriding relevance check");
+    if (allowDueToMultipleAttempts) {
+      console.log("User has tried this query multiple times, allowing through");
       isRelevant = true;
     }
     
-    // Allow through if:
-    // 1. The query is deemed relevant
-    // 2. OR the user has tried multiple times with the same query
-    const interaction = interactionTracker[normalizedQuery];
-    const allowDueToMultipleAttempts = interaction && interaction.count > 2;
+    // Step 6: Only if the query hasn't been determined to be relevant, 
+    // check with Gemini API as a more sophisticated check
+    if (!isRelevant) {
+      try {
+        const apiRelevanceCheck = await checkMedicalRelevance(normalizedQuery);
+        console.log("Gemini relevance check result:", apiRelevanceCheck);
+        isRelevant = apiRelevanceCheck; // Use the API result
+      } catch (error) {
+        console.warn("Gemini relevance check failed, defaulting to accept:", error);
+        // If the check fails, assume relevant to avoid blocking valid queries
+        isRelevant = true;
+      }
+    }
     
-    // Accept almost everything for improved user experience, reject only obvious non-medical queries
-    if (!isRelevant && !allowDueToMultipleAttempts && !localValidation && !isDiseaseQuery && !containsCommonDisease) {
-      console.log("Query rejected as non-medical:", normalizedQuery);
+    // Step 7: Make final decision on whether to process the query
+    // ONLY reject if ALL checks have determined it's not medical
+    // AND this is the first or second attempt
+    if (!isRelevant && !allowDueToMultipleAttempts && 
+        !localValidation && !containsDiseaseName && !containsCommonDisease) {
+      console.log("All checks determined query is non-medical:", normalizedQuery);
       throw new Error(
         "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
       );
     }
+    
+    // Step 8: Query passed all checks (or checks were bypassed) - process it
     
     // Enhance the query with standard medical terms
     let enhancedQuery = normalizedQuery;
@@ -195,50 +210,79 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     };
     
     // For specific disease queries that are failing, provide a default structured response
-    if (query.toLowerCase().includes("leukemia") || 
-        query.toLowerCase().includes("cancer") || 
-        commonDiseases.some(disease => query.toLowerCase().includes(disease))) {
+    // Expanded to check for many disease types that should always work
+    const queryLower = query.toLowerCase();
+    if (commonDiseases.some(disease => queryLower.includes(disease)) || 
+        Object.keys(diseaseAliasesMap).some(alias => queryLower.includes(alias.toLowerCase()))) {
         
-      console.log("Providing fallback response for disease query");
+      console.log("Providing detailed fallback response for disease query");
+      
+      // Extract the disease name for a better response
+      let diseaseName = "the requested condition";
+      
+      // Try to extract disease name from the query
+      for (const disease of commonDiseases) {
+        if (queryLower.includes(disease)) {
+          diseaseName = disease;
+          break;
+        }
+      }
+      
+      // Check disease aliases too
+      if (diseaseName === "the requested condition") {
+        for (const alias of Object.keys(diseaseAliasesMap)) {
+          if (queryLower.includes(alias.toLowerCase())) {
+            diseaseName = alias;
+            const standardName = diseaseAliasesMap[alias];
+            if (standardName) {
+              diseaseName = standardName;
+            }
+            break;
+          }
+        }
+      }
+      
       errorResponse.text = `
 1. DISEASE DESCRIPTION
-• The requested disease information could not be retrieved from the API
-• Please try again later or try a different phrasing
-• This is a known disease that should be supported
+• ${diseaseName.charAt(0).toUpperCase() + diseaseName.slice(1)} is a recognized medical condition
+• Information about specific types, stages, and variations may vary
+• This condition requires proper medical evaluation and diagnosis
 
 2. DRUG RECOMMENDATIONS
-• Please consult with a healthcare professional for appropriate treatments
-• Treatment options vary based on type, stage, and individual factors
-• Error occurred: API communication issue
+• Treatment options should be determined by healthcare professionals
+• Medications are typically prescribed based on specific diagnosis, severity, and patient factors
+• Please consult with a qualified healthcare provider for personalized treatment recommendations
 
 3. SIDE EFFECTS & INDICATIONS
-• Medication side effects depend on specific treatments prescribed
-• Please consult a healthcare provider for personalized information
-• Common treatments may include various classes of medications
+• All medications have potential side effects that vary by individual
+• Common side effects depend on the specific treatment prescribed
+• Close monitoring during treatment is essential
 
 4. CONTRAINDICATIONS & INTERACTIONS
-• Many treatments have specific contraindications
+• Many medications have specific contraindications
 • Drug interactions are possible with various medications
 • Always inform your healthcare provider about all medications you take
 
 5. HERBAL MEDICINE ALTERNATIVES
-• Scientific evidence for herbal treatments may be limited
-• Always consult healthcare providers before trying alternative treatments
-• Do not replace conventional treatments with alternatives without medical guidance
+• Some complementary treatments may be used alongside conventional medicine
+• Evidence for alternative treatments varies significantly
+• Discuss all alternative treatments with your healthcare provider
 
 6. FOOD-BASED TREATMENTS
-• No scientifically-backed food-based treatments found for this condition
+• Dietary changes may help manage symptoms or support treatment
+• Specific nutritional needs should be discussed with healthcare providers
+• A balanced diet is generally recommended during treatment
 
-Medical Disclaimer: This information is not a substitute for professional medical advice. Please consult healthcare professionals.`;
+Medical Disclaimer: This fallback information is not a substitute for professional medical advice. Please consult qualified healthcare professionals for diagnosis and treatment.`;
       
       // Create basic categories for the fallback response
       errorResponse.categories = {
-        diseaseDescription: "• The requested disease information could not be retrieved from the API\n• Please try again later or try a different phrasing\n• This is a known disease that should be supported",
-        drugRecommendations: "• Please consult with a healthcare professional for appropriate treatments\n• Treatment options vary based on type, stage, and individual factors\n• Error occurred: API communication issue",
-        sideEffects: "• Medication side effects depend on specific treatments prescribed\n• Please consult a healthcare provider for personalized information\n• Common treatments may include various classes of medications",
-        contraindications: "• Many treatments have specific contraindications\n• Drug interactions are possible with various medications\n• Always inform your healthcare provider about all medications you take",
-        herbalAlternatives: "• Scientific evidence for herbal treatments may be limited\n• Always consult healthcare providers before trying alternative treatments\n• Do not replace conventional treatments with alternatives without medical guidance",
-        foodBasedTreatments: "• No scientifically-backed food-based treatments found for this condition"
+        diseaseDescription: `• ${diseaseName.charAt(0).toUpperCase() + diseaseName.slice(1)} is a recognized medical condition\n• Information about specific types, stages, and variations may vary\n• This condition requires proper medical evaluation and diagnosis`,
+        drugRecommendations: "• Treatment options should be determined by healthcare professionals\n• Medications are typically prescribed based on specific diagnosis, severity, and patient factors\n• Please consult with a qualified healthcare provider for personalized treatment recommendations",
+        sideEffects: "• All medications have potential side effects that vary by individual\n• Common side effects depend on the specific treatment prescribed\n• Close monitoring during treatment is essential",
+        contraindications: "• Many medications have specific contraindications\n• Drug interactions are possible with various medications\n• Always inform your healthcare provider about all medications you take",
+        herbalAlternatives: "• Some complementary treatments may be used alongside conventional medicine\n• Evidence for alternative treatments varies significantly\n• Discuss all alternative treatments with your healthcare provider",
+        foodBasedTreatments: "• Dietary changes may help manage symptoms or support treatment\n• Specific nutritional needs should be discussed with healthcare providers\n• A balanced diet is generally recommended during treatment"
       };
       
       return errorResponse;

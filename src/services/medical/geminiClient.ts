@@ -1,3 +1,4 @@
+
 import { GEMINI_CONFIG } from './geminiConfig';
 
 /**
@@ -110,7 +111,7 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
   }
 };
 
-// Check if a query is medically relevant with more permissive parsing
+// Check if a query is medically relevant with completely redesigned parsing logic
 export const checkMedicalRelevance = async (query: string): Promise<boolean> => {
   try {
     // Import the relevance check prompt from config
@@ -122,69 +123,117 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
     // Call the Gemini API with the relevance check prompt
     console.log(`Checking relevance for: "${query}"`);
     const response = await callGeminiAPI(relevanceCheckPrompt);
+    console.log("Raw relevance response:", response);
     
-    // More resilient JSON parsing with multiple fallback strategies
-    try {
-      // First, try to find and parse any JSON-like structure in the response
-      const jsonMatch = response.match(/(\{.*?\})/s);
-      if (jsonMatch && jsonMatch[0]) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        // Check if the isRelevant field is defined and is a boolean
-        if (parsed && typeof parsed.isRelevant === 'boolean') {
-          console.log("Successfully parsed relevance check result:", parsed);
-          return parsed.isRelevant;
-        }
-      }
-      
-      // Next try: Clean the response of any markdown code block formatting
-      const cleanedResponse = response.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleanedResponse);
-      
-      console.log("Parsed relevance check result (after cleaning):", parsed);
-      
-      // Check if the isRelevant field is defined and is a boolean
-      if (parsed && typeof parsed.isRelevant === 'boolean') {
-        return parsed.isRelevant;
-      }
-    } catch (jsonError) {
-      console.warn("Failed to parse relevance check response as JSON:", jsonError);
-    }
+    // New multi-stage parsing approach:
     
-    // Fallback to keyword detection - much more permissive approach
-    console.log("Falling back to keyword-based relevance detection");
-    
-    // For certain medical keywords, always consider relevant
-    const definitelyMedicalKeywords = [
-      'disease', 'condition', 'syndrome', 'leukemia', 'cancer', 'diabetes', 
-      'hypertension', 'asthma', 'arthritis', 'medication', 'treatment'
+    // Stage 1: Check if any keywords in the query are obviously medical
+    const medicalKeywords = [
+      'disease', 'treatment', 'symptom', 'medication', 'drug',
+      'cancer', 'leukemia', 'therapy', 'diagnosis', 'syndrome',
+      'infection', 'virus', 'bacterial', 'diet', 'health',
+      'medicine', 'prescription', 'hospital', 'doctor', 'patient',
+      'condition', 'chronic', 'acute', 'pain', 'inflammation',
+      'diabetes', 'asthma', 'hypertension', 'arthritis'
     ];
     
-    // Check for obvious medical terms first
-    for (const keyword of definitelyMedicalKeywords) {
-      if (query.toLowerCase().includes(keyword.toLowerCase())) {
-        console.log(`Query contains medical keyword '${keyword}', considering relevant`);
+    const queryLower = query.toLowerCase();
+    for (const keyword of medicalKeywords) {
+      if (queryLower.includes(keyword)) {
+        console.log(`Query contains medical keyword: ${keyword}`);
         return true;
       }
     }
     
-    // Fallback: Look for positive keywords in the response text
-    const positiveIndicators = ['"isRelevant": true', 'yes', 'relevant', 'medical', 'health', 'medication', 'treatment', 'true'];
-    const isRelevant = positiveIndicators.some(indicator => 
-      response.toLowerCase().includes(indicator.toLowerCase())
-    );
+    // Stage 2: Direct JSON extraction with multiple patterns
+    try {
+      // Pattern 1: Look for valid JSON object with curly braces
+      const jsonMatch = response.match(/(\{.*?\})/s);
+      if (jsonMatch && jsonMatch[0]) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (typeof parsed.isRelevant === 'boolean') {
+            console.log("Successfully extracted JSON with isRelevant:", parsed);
+            return parsed.isRelevant;
+          }
+        } catch (e) {
+          console.warn("Failed to parse extracted JSON object:", e);
+        }
+      }
+      
+      // Pattern 2: Look for true/false values
+      if (response.includes('"isRelevant": true') || response.includes('"isRelevant":true')) {
+        console.log("Found isRelevant:true pattern in response");
+        return true;
+      }
+      
+      if (response.includes('"isRelevant": false') || response.includes('"isRelevant":false')) {
+        console.log("Found isRelevant:false pattern in response");
+        return false;
+      }
+      
+      // Stage 3: Clean response and try again with more permissive approach
+      const cleanedResponse = response
+        .replace(/```json|```/g, '')
+        .replace(/(\r\n|\n|\r)/gm, '')
+        .trim();
+      
+      // Look for any valid JSON object in the cleaned response
+      const matches = cleanedResponse.match(/\{[^{}]*\}/g);
+      if (matches) {
+        for (const match of matches) {
+          try {
+            const parsed = JSON.parse(match);
+            if (typeof parsed.isRelevant === 'boolean') {
+              console.log("Successfully extracted JSON from cleaned response:", parsed);
+              return parsed.isRelevant;
+            }
+          } catch (e) {
+            console.warn("Failed to parse JSON match from cleaned response");
+          }
+        }
+      }
+    } catch (jsonError) {
+      console.warn("All JSON parsing attempts failed:", jsonError);
+    }
     
-    // If we found positive indicators, consider it relevant
-    if (isRelevant) {
-      console.log("Text-based relevance check found positive indicators");
+    // Stage 4: Fall back to text-based analysis of the response
+    const positiveIndicators = ['yes', 'relevant', 'medical', 'health', 'true', 'valid'];
+    const negativeIndicators = ['no', 'not relevant', 'non-medical', 'false', 'invalid'];
+    
+    let positiveScore = 0;
+    let negativeScore = 0;
+    
+    const responseLower = response.toLowerCase();
+    
+    positiveIndicators.forEach(indicator => {
+      if (responseLower.includes(indicator)) positiveScore++;
+    });
+    
+    negativeIndicators.forEach(indicator => {
+      if (responseLower.includes(indicator)) negativeScore++;
+    });
+    
+    console.log(`Text-based relevance analysis: Positive=${positiveScore}, Negative=${negativeScore}`);
+    
+    // If more positive than negative indicators, consider it relevant
+    if (positiveScore > negativeScore) {
       return true;
     }
     
-    console.log("Query determined to be non-medical");
+    // Stage 5: Default fallback - a last-resort attempt
+    // Query length heuristic: longer queries are more likely to be legitimate
+    if (query.length > 15 || query.split(' ').length > 2) {
+      console.log("Defaulting to accept based on query complexity");
+      return true;
+    }
+    
+    console.log("Query determined to be non-medical after exhausting all checks");
     return false;
   } catch (error) {
     console.error("Error checking medical relevance:", error);
     // Default to accepting the query if there's an error with the API
+    console.log("Accepting query due to relevance check error");
     return true;
   }
 };

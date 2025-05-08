@@ -3,13 +3,13 @@ export const GEMINI_CONFIG = {
   API_KEY: "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY",
   API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
   DEFAULT_PARAMS: {
-    temperature: 0.6,  // Increased temperature slightly for more diverse responses
-    topK: 32,
-    topP: 1.0,         // Increased to maximum for wider response distribution
-    maxOutputTokens: 2048,  // Increased token limit for more comprehensive responses
+    temperature: 0.7,  // Adjusted for even more diverse responses
+    topK: 40,
+    topP: 1.0,         // Maximum for wide response distribution
+    maxOutputTokens: 4096,  // Doubled token limit for more comprehensive responses
   },
-  MAX_RETRIES: 3,      // Increased retries
-  RETRY_DELAY: 1500    // Increased delay between retries
+  MAX_RETRIES: 5,      // Increased retries further
+  RETRY_DELAY: 1000    // Slightly decreased delay for faster retries
 } as const;
 
 export const MEDICAL_PROMPT_TEMPLATE = `
@@ -49,18 +49,20 @@ Format your response with these sections using bullet points:
 
 If no food-based treatments exist, state: "• No scientifically-backed food-based treatments found for this condition."
 
-Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
-Include a medical disclaimer.
+Use bullet points (•) for all information. Each section should provide 3-6 relevant points.
+Include a medical disclaimer at the end.
 
-IMPORTANT: Provide information for ANY medical condition or disease asked about, including but not limited to: cancer types (leukemia, lymphoma, etc), rare diseases, chronic conditions, mental health disorders, and infectious diseases.`;
+IMPORTANT: You MUST include all 6 sections with content in your response. If information for a section is not available, provide general advice related to that category.
 
-// Updated to produce strictly valid JSON output
+DO NOT leave out any sections. DO NOT return an empty response. If the query is unclear, interpret it as best as possible and provide general medical information related to the topic.`;
+
+// Updated to guarantee valid JSON output using a simplified format
 export const RELEVANCE_CHECK_PROMPT = `
 You are a medical query validator that ONLY outputs valid JSON.
 
 Determine if the query "{query}" is related to human health, medical conditions, medications, treatments, or wellness.
 
-Output ONLY a JSON object in exactly this format — no markdown, no comments, no explanation:
+Output ONLY a JSON object in this exact format with no other text:
 {"isRelevant": true/false, "reason": "brief explanation"}
 
 For any disease, medication, or symptom name, ALWAYS return:

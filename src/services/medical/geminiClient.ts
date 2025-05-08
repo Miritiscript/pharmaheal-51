@@ -46,14 +46,21 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
       // Log the raw response for debugging
       console.log("Gemini API raw response success:", JSON.stringify(data).substring(0, 200) + "...");
       
-      // Extract and return the text
-      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      // Enhanced extraction and validation of response text
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        console.error("Invalid response structure from Gemini API:", data);
+        throw new Error("Invalid response structure from Gemini API");
+      }
       
-      if (!responseText) {
-        throw new Error("Empty response from Gemini API");
+      const responseText = data.candidates[0].content.parts[0].text;
+      
+      if (!responseText || responseText.trim().length < 20) {
+        console.error("Empty or too short response from Gemini API:", responseText);
+        throw new Error("Empty or too short response from Gemini API");
       }
       
       console.log("Successful response length:", responseText.length);
+      console.log("Response preview:", responseText.substring(0, 100) + "...");
       return responseText;
     } catch (error) {
       lastError = error;
@@ -103,6 +110,17 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
               `• The system is currently unable to provide details about this condition\n` +
               `• Please try again later or try rephrasing your query\n` +
               `• Error details: ${error.message}\n\n` +
+              `2. DRUG RECOMMENDATIONS\n` +
+              `• Unable to provide medication information at this time\n` +
+              `• Please consult with a healthcare professional\n\n` +
+              `3. SIDE EFFECTS & INDICATIONS\n` +
+              `• Unable to provide side effect information at this time\n\n` +
+              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
+              `• Unable to provide contraindication information at this time\n\n` +
+              `5. HERBAL MEDICINE ALTERNATIVES\n` +
+              `• Unable to provide herbal medicine information at this time\n\n` +
+              `6. FOOD-BASED TREATMENTS\n` +
+              `• Unable to provide food-based treatment information at this time\n\n` +
               `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`
       };
     }

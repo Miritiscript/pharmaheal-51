@@ -1,40 +1,43 @@
+
 import { GEMINI_CONFIG } from './geminiConfig';
 import { generateGroqContent } from '../groq/groqClient';
 import { generateLocalFallbackResponse } from './localFallback';
 
 /**
- * Calls Gemini API with enhanced retry mechanism for improved reliability
+ * Calls Gemini API with enhanced retry mechanism and better error reporting
  */
 export const callGeminiAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Gemini API with prompt:", prompt.substring(0, 100) + "...");
   
   // Check if we need to use local fallback (no API key available)
-  if (!GEMINI_CONFIG.API_KEY || GEMINI_CONFIG.API_KEY.trim() === "") {
-    console.warn("No Gemini API key available, using local fallback");
-    return await generateLocalFallbackResponse(prompt);
+  const apiKey = GEMINI_CONFIG.API_KEY || "";
+  
+  // More robust validation of API key
+  if (!apiKey || apiKey.length < 10) {
+    console.warn("No valid Gemini API key available, key length:", apiKey.length);
+    throw new Error("Invalid or missing Gemini API key");
   }
   
-  // Implement retry logic
+  // Enhanced logging of API details (without exposing the key)
+  console.log("Gemini API details:", {
+    URL: GEMINI_CONFIG.API_URL,
+    apiKeyPresent: !!apiKey,
+    apiKeyLength: apiKey.length,
+    maxRetries: GEMINI_CONFIG.MAX_RETRIES,
+    timeout: GEMINI_CONFIG.TIMEOUT_MS
+  });
+  
+  // Implement retry logic with better tracking
   let attempts = 0;
   let lastError = null;
   
   while (attempts <= GEMINI_CONFIG.MAX_RETRIES) {
     try {
-      console.log(`API attempt ${attempts + 1}...`);
+      console.log(`Gemini API attempt ${attempts + 1}...`);
       
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), GEMINI_CONFIG.TIMEOUT_MS);
-      
-      // API Key debug
-      const apiKey = GEMINI_CONFIG.API_KEY || "";
-      console.log(`Using API Key: ${apiKey ? "Key available (length: " + apiKey.length + ")" : "No API key found!"}`);
-      
-      // Model debug
-      console.log(`API URL: ${GEMINI_CONFIG.API_URL}`);
-      
-      // Request debug - don't log the actual API key
-      console.log(`Request URL: ${GEMINI_CONFIG.API_URL}?key=API_KEY_REDACTED`);
       
       // Format the request body
       const requestBody = {
@@ -50,7 +53,7 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
         generationConfig: GEMINI_CONFIG.DEFAULT_PARAMS,
       };
       
-      console.log("Request body:", JSON.stringify(requestBody).substring(0, 200) + "...");
+      console.log("Request body format:", Object.keys(requestBody));
       
       // Make actual API call
       try {
@@ -66,30 +69,59 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
         // Clear the timeout since we got a response
         clearTimeout(timeoutId);
 
-        // Check for HTTP errors
+        // Detailed logging for HTTP status
+        console.log(`Gemini API response status: ${response.status} ${response.statusText}`);
+
+        // Check for HTTP errors with enhanced logging
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: { message: `HTTP error ${response.status}` }}));
-          console.error("Gemini API HTTP error:", errorData);
-          console.error(`Status: ${response.status}, StatusText: ${response.statusText}`);
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            errorData = { error: { message: `HTTP error ${response.status}` }};
+          }
           
-          // Specific error handling
+          console.error("Gemini API HTTP error details:", errorData);
+          
+          // Specific error handling for common issues
           if (response.status === 403) {
-            console.error("API key authentication error. Using local fallback.");
-            return await generateLocalFallbackResponse(prompt);
+            console.error("API key authentication error. Key may be invalid or expired.");
+            throw new Error("Gemini API key authentication failed");
+          } else if (response.status === 429) {
+            console.error("Gemini API quota exceeded or rate limit hit");
+            throw new Error("Gemini API rate limit exceeded");
           }
           
           throw new Error(errorData.error?.message || `HTTP error ${response.status}: ${response.statusText}`);
         }
 
-        // Parse the response
-        const data = await response.json();
+        // Parse the response with better error handling
+        let data;
+        try {
+          data = await response.json();
+          console.log("Successfully parsed Gemini response JSON");
+        } catch (parseError) {
+          console.error("Failed to parse Gemini API response as JSON:", parseError);
+          throw new Error("Invalid JSON response from Gemini API");
+        }
         
-        // Log the raw response for debugging
-        console.log("Gemini API raw response success:", JSON.stringify(data).substring(0, 200) + "...");
+        // Log structure of the response for debugging
+        console.log("Gemini API response structure:", 
+          data ? 
+          `Contains candidates: ${!!data.candidates}, ` +
+          `First candidate has content: ${!!(data.candidates?.[0]?.content)}` : 
+          "No data"
+        );
         
         // Enhanced extraction and validation of response text
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-          console.error("Invalid response structure from Gemini API:", data);
+        if (!data.candidates || 
+            !Array.isArray(data.candidates) || 
+            data.candidates.length === 0 || 
+            !data.candidates[0].content || 
+            !data.candidates[0].content.parts || 
+            !data.candidates[0].content.parts[0]) {
+          console.error("Invalid response structure from Gemini API:", 
+            JSON.stringify(data).substring(0, 500));
           throw new Error("Invalid response structure from Gemini API");
         }
         
@@ -100,12 +132,24 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
           throw new Error("Empty or too short response from Gemini API");
         }
         
-        console.log("Successful response length:", responseText.length);
-        console.log("Response preview:", responseText.substring(0, 100) + "...");
+        console.log("Successful Gemini response with length:", responseText.length);
+        console.log("Gemini response preview:", responseText.substring(0, 100) + "...");
         return responseText;
       } catch (fetchError) {
         // If fetch itself failed (not a response status error)
         clearTimeout(timeoutId);
+        
+        // Enhanced CORS/CSP error detection
+        if (fetchError.message && (
+            fetchError.message.includes("Content Security Policy") ||
+            fetchError.message.includes("blocked by CORS policy") ||
+            fetchError.message.includes("NetworkError") ||
+            fetchError.name === 'TypeError'
+        )) {
+          console.error("Network, CORS or CSP error with Gemini API:", fetchError);
+          throw new Error(`Network connectivity issue with Gemini API: ${fetchError.message}`);
+        }
+        
         throw fetchError;
       }
     } catch (error) {
@@ -119,13 +163,13 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
       
       // If we've reached max retries, throw the error
       if (attempts >= GEMINI_CONFIG.MAX_RETRIES) {
-        console.error("Max retries reached, giving up");
+        console.error("Max retries reached, giving up on Gemini API");
         throw error;
       }
       
       // Otherwise wait and retry with exponential backoff
       const delayTime = GEMINI_CONFIG.RETRY_DELAY * Math.pow(1.5, attempts);
-      console.log(`Retrying in ${delayTime}ms...`);
+      console.log(`Retrying Gemini API in ${delayTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, delayTime));
       attempts++;
     }
@@ -136,8 +180,8 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
 };
 
 // Generate content using main medical prompt with improved error handling
-// Now with Groq fallback
-export const generateGeminiContent = async (query: string): Promise<{ text: string, error?: string }> => {
+// Now with Groq fallback and detailed source tracking
+export const generateGeminiContent = async (query: string): Promise<{ text: string, error?: string, source?: string }> => {
   try {
     // Import the medical prompt template from config
     const { MEDICAL_PROMPT_TEMPLATE } = await import('./geminiConfig');
@@ -145,40 +189,58 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
     // Replace the placeholder with the actual query
     const medicalPrompt = MEDICAL_PROMPT_TEMPLATE.replace("{query}", query);
     
-    console.log(`Sending medical query to Gemini: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
+    console.log(`Attempting primary Gemini service with query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
     
-    // Try to get a response with retries built in
+    // Try to get a response from Gemini with retries built in
     try {
+      console.log("Attempting Gemini API call...");
       const response = await callGeminiAPI(medicalPrompt);
       
-      // Validate the response contains the expected format
+      // Validate the response contains the expected format with enhanced logging
+      console.log("Validating Gemini response format...");
+      
       // This is a simple check to see if the response has bullet points and section headers
-      if (response.includes("•") && 
-          (response.includes("DISEASE DESCRIPTION") || 
-          response.includes("DRUG RECOMMENDATIONS"))) {
-        return { text: response };
-      } else {
-        console.warn("Gemini response does not match expected format, falling back to Groq");
-        throw new Error("Invalid response format");
+      const hasExpectedFormat = response.includes("•") && 
+        (response.includes("DISEASE DESCRIPTION") || 
+         response.includes("DRUG RECOMMENDATIONS"));
+      
+      if (!hasExpectedFormat) {
+        console.warn("Gemini response does not match expected format:", 
+          response.substring(0, 200) + "...");
+        console.log("Falling back to Groq due to invalid response format");
+        throw new Error("Invalid response format from Gemini");
       }
+      
+      console.log("Successfully validated Gemini response");
+      return { text: response, source: "gemini" };
     } catch (geminiError) {
-      console.error("Gemini API failed, falling back to Groq:", geminiError);
+      console.error("Gemini API failed, detailed error:", geminiError);
+      console.log("Falling back to Groq API...");
       
       // If Gemini fails, try Groq as a fallback
-      console.log("Using Groq as fallback for query:", query);
-      return await generateGroqContent(query);
+      try {
+        console.log("Using Groq as fallback for query:", query);
+        const groqResponse = await generateGroqContent(query);
+        console.log("Successfully retrieved Groq fallback response");
+        return { ...groqResponse, source: "groq" };
+      } catch (groqError) {
+        console.error("Both Gemini and Groq APIs failed:", groqError);
+        throw new Error(`Both primary and secondary AI services failed: ${geminiError.message} / ${groqError.message}`);
+      }
     }
   } catch (error) {
     console.error("Failed to generate content with both Gemini and Groq:", error);
     
     // Ultimate fallback if both providers fail - generate response locally
     try {
+      console.log("Using local fallback as last resort...");
       const fallbackResponse = await generateLocalFallbackResponse(query);
-      return { text: fallbackResponse };
+      console.log("Successfully generated local fallback response");
+      return { text: fallbackResponse, source: "local-fallback" };
     } catch (localFallbackError) {
       // If even local fallback fails, return a simple error message
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error("Final error message:", errorMessage);
+      console.error("Final error - even local fallback failed:", localFallbackError);
       
       return { 
         text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
@@ -198,13 +260,14 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
               `6. FOOD-BASED TREATMENTS\n` +
               `• Unable to provide food-based treatment information at this time\n\n` +
               `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
-        error: errorMessage
+        error: errorMessage,
+        source: "error-fallback"
       };
     }
   }
 };
 
-// Check if a query is medically relevant with completely redesigned parsing logic
+// Check if a query is medically relevant with improved error handling
 export const checkMedicalRelevance = async (query: string): Promise<boolean> => {
   try {
     // Import the relevance check prompt from config
@@ -220,7 +283,7 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
       const response = await callGeminiAPI(relevanceCheckPrompt);
       console.log("Raw relevance response:", response);
       
-      // New multi-stage parsing approach:
+      // Enhanced parsing logic with better error handling
       
       // Stage 1: Check if any keywords in the query are obviously medical
       const medicalKeywords = [
@@ -240,34 +303,54 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
         }
       }
       
-      // Stage 2: Direct JSON extraction with multiple patterns
+      // Multi-step JSON extraction with robust error handling
       try {
-        // Pattern 1: Look for valid JSON object with curly braces
-        const jsonMatch = response.match(/(\{.*?\})/s);
-        if (jsonMatch && jsonMatch[0]) {
+        // Try several JSON extraction methods
+        let parsed = null;
+        
+        // Method 1: Try direct JSON.parse if the response looks like JSON
+        if (response.trim().startsWith('{') && response.trim().endsWith('}')) {
           try {
-            const parsed = JSON.parse(jsonMatch[0]);
+            parsed = JSON.parse(response.trim());
             if (typeof parsed.isRelevant === 'boolean') {
-              console.log("Successfully extracted JSON with isRelevant:", parsed);
+              console.log("Successfully parsed JSON directly:", parsed);
               return parsed.isRelevant;
             }
           } catch (e) {
-            console.warn("Failed to parse extracted JSON object:", e);
+            console.warn("Failed direct JSON parsing");
           }
         }
         
-        // Pattern 2: Look for true/false values
-        if (response.includes('"isRelevant": true') || response.includes('"isRelevant":true')) {
+        // Method 2: Look for JSON pattern with regex
+        const jsonMatch = response.match(/(\{.*?\})/s);
+        if (jsonMatch && jsonMatch[0]) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+            if (typeof parsed.isRelevant === 'boolean') {
+              console.log("Successfully extracted JSON with regex:", parsed);
+              return parsed.isRelevant;
+            }
+          } catch (e) {
+            console.warn("Failed regex JSON extraction");
+          }
+        }
+        
+        // Method 3: Look for true/false patterns
+        if (response.includes('"isRelevant": true') || 
+            response.includes('"isRelevant":true') || 
+            response.includes('{"isRelevant":true}')) {
           console.log("Found isRelevant:true pattern in response");
           return true;
         }
         
-        if (response.includes('"isRelevant": false') || response.includes('"isRelevant":false')) {
+        if (response.includes('"isRelevant": false') || 
+            response.includes('"isRelevant":false') ||
+            response.includes('{"isRelevant":false}')) {
           console.log("Found isRelevant:false pattern in response");
           return false;
         }
         
-        // Stage 3: Clean response and try again with more permissive approach
+        // Method 4: Clean response and try more aggressive parsing
         const cleanedResponse = response
           .replace(/```json|```/g, '')
           .replace(/(\r\n|\n|\r)/gm, '')
@@ -278,7 +361,7 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
         if (matches) {
           for (const match of matches) {
             try {
-              const parsed = JSON.parse(match);
+              parsed = JSON.parse(match);
               if (typeof parsed.isRelevant === 'boolean') {
                 console.log("Successfully extracted JSON from cleaned response:", parsed);
                 return parsed.isRelevant;
@@ -288,11 +371,13 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
             }
           }
         }
+        
+        console.log("All JSON parsing attempts failed, falling back to text analysis");
       } catch (jsonError) {
-        console.warn("All JSON parsing attempts failed:", jsonError);
+        console.warn("All structured parsing attempts failed:", jsonError);
       }
       
-      // Stage 4: Fall back to text-based analysis of the response
+      // Fallback to text-based analysis
       const positiveIndicators = ['yes', 'relevant', 'medical', 'health', 'true', 'valid'];
       const negativeIndicators = ['no', 'not relevant', 'non-medical', 'false', 'invalid'];
       
@@ -316,8 +401,7 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
         return true;
       }
       
-      // Stage 5: Default fallback - a last-resort attempt
-      // Query length heuristic: longer queries are more likely to be legitimate
+      // Final fallback - accept longer, more complex queries by default
       if (query.length > 15 || query.split(' ').length > 2) {
         console.log("Defaulting to accept based on query complexity");
         return true;
@@ -326,13 +410,13 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
       console.log("Query determined to be non-medical after exhausting all checks");
       return false;
     } catch (apiError) {
-      // If API call fails, assume query is medical by default
-      console.log("API call failed, assuming query is medically relevant");
+      // If API call fails, assume query is medical by default (fail open)
+      console.log("API call failed for relevance check, assuming query is medically relevant:", apiError);
       return true;
     }
   } catch (error) {
     console.error("Error checking medical relevance:", error);
-    // Default to accepting the query if there's an error with the API
+    // Default to accepting the query if there's an error (fail open)
     console.log("Accepting query due to relevance check error");
     return true;
   }

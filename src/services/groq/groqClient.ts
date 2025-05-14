@@ -3,21 +3,36 @@ import { GROQ_CONFIG, GROQ_MEDICAL_PROMPT } from './groqConfig';
 import { generateLocalFallbackResponse } from '../medical/localFallback';
 
 /**
- * Calls the Groq API with retry mechanism
+ * Calls the Groq API with enhanced retry mechanism and better logging
  */
 export const callGroqAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Groq API with prompt:", prompt.substring(0, 100) + "...");
   
-  // Check if we need to use local fallback
-  const useLocalFallback = !GROQ_CONFIG.API_KEY || import.meta.env.DEV || localStorage.getItem('use_local_groq_fallback') === 'true';
+  // Check if we need to use local fallback - now with clear logging
+  const useLocalFallback = !GROQ_CONFIG.API_KEY || 
+                          GROQ_CONFIG.API_KEY.length < 10 || 
+                          localStorage.getItem('use_local_groq_fallback') === 'true';
   
   if (useLocalFallback) {
-    console.log("Using local fallback for Groq API (no API key or in development mode)");
+    console.log("Using local fallback for Groq API because:", 
+      !GROQ_CONFIG.API_KEY ? "No API key available" : 
+      GROQ_CONFIG.API_KEY.length < 10 ? "API key appears invalid (too short)" : 
+      "Local fallback setting is enabled");
     return await generateLocalFallbackResponse(prompt);
   }
   
   let attempts = 0;
   let lastError = null;
+  
+  // Log details about the API call we're about to make
+  console.log("Groq API details:", {
+    URL: GROQ_CONFIG.API_URL,
+    model: GROQ_CONFIG.MODEL,
+    apiKeyPresent: !!GROQ_CONFIG.API_KEY,
+    apiKeyLength: GROQ_CONFIG.API_KEY?.length || 0,
+    maxRetries: GROQ_CONFIG.MAX_RETRIES,
+    retryDelay: GROQ_CONFIG.RETRY_DELAY
+  });
   
   while (attempts <= GROQ_CONFIG.MAX_RETRIES) {
     try {
@@ -28,7 +43,7 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       
       try {
-        // Call the Groq API directly
+        // Call the Groq API directly - now using consistent error handling
         console.log(`Sending request to Groq API using model: ${GROQ_CONFIG.MODEL}`);
         const response = await fetch(GROQ_CONFIG.API_URL, {
           method: "POST",
@@ -54,31 +69,49 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
         // Clear the timeout
         clearTimeout(timeoutId);
 
-        // Check for HTTP errors
+        // Check for HTTP errors with enhanced logging
         if (!response.ok) {
           const errorText = await response.text();
           console.error("Groq API HTTP error:", errorText);
           console.error(`Status: ${response.status}, StatusText: ${response.statusText}`);
           
-          // If we got a 401/403 error or CSP error, enable local fallback for next time
-          if (response.status === 401 || response.status === 403 || errorText.includes("Content Security Policy")) {
-            console.log("Enabling local fallback mode for future requests due to auth/CSP error");
+          // More specific error handling
+          if (response.status === 401 || response.status === 403) {
+            console.error("Authentication error with Groq API - likely invalid API key");
             localStorage.setItem('use_local_groq_fallback', 'true');
-            
-            // Try to use local fallback this time too
+            return await generateLocalFallbackResponse(prompt);
+          } else if (response.status === 429) {
+            console.error("Rate limit exceeded with Groq API");
+            if (attempts >= GROQ_CONFIG.MAX_RETRIES) {
+              localStorage.setItem('use_local_groq_fallback', 'true');
+              return await generateLocalFallbackResponse(prompt);
+            }
+          } else if (errorText.includes("Content Security Policy")) {
+            console.error("CSP error detected with Groq API");
+            localStorage.setItem('use_local_groq_fallback', 'true');
             return await generateLocalFallbackResponse(prompt);
           }
           
           throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
 
-        // Parse the response
-        const data = await response.json();
+        // Parse the response with better error handling
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error("Failed to parse Groq API response as JSON:", parseError);
+          throw new Error("Invalid JSON response from Groq API");
+        }
         
         console.log("Groq API raw response:", JSON.stringify(data).substring(0, 200) + "...");
         
-        // Extract the response text
-        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        // Extract the response text with more robust error handling
+        if (!data.choices || 
+            !Array.isArray(data.choices) || 
+            data.choices.length === 0 || 
+            !data.choices[0].message || 
+            !data.choices[0].message.content) {
           console.error("Invalid structure in Groq response:", data);
           
           // Check for fallback message in error
@@ -92,18 +125,23 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
         
         const responseText = data.choices[0].message.content;
         
+        // Validate response quality
         if (!responseText || responseText.trim().length < 20) {
           console.error("Empty or too short response from Groq API:", responseText);
           throw new Error("Empty or too short response from Groq API");
         }
         
-        console.log("Successful Groq response length:", responseText.length);
+        console.log("Successful Groq response with length:", responseText.length);
         console.log("Groq response preview:", responseText.substring(0, 100) + "...");
         return responseText;
       } catch (fetchError) {
         // Handle Content Security Policy errors specifically
-        if (fetchError.message && fetchError.message.includes("Content Security Policy")) {
-          console.error("CSP error detected, switching to local fallback:", fetchError);
+        if (fetchError.message && (
+            fetchError.message.includes("Content Security Policy") ||
+            fetchError.message.includes("blocked by CORS policy") ||
+            fetchError.message.includes("NetworkError")
+        )) {
+          console.error("Network or CSP error detected, switching to local fallback:", fetchError);
           localStorage.setItem('use_local_groq_fallback', 'true');
           return await generateLocalFallbackResponse(prompt);
         }
@@ -147,17 +185,18 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
   }
 };
 
-// Generate content using Groq
+// Generate content using Groq with enhanced error handling and logging
 export const generateGroqContent = async (query: string): Promise<{ text: string, error?: string }> => {
   try {
     // Replace the placeholder with the actual query
     const medicalPrompt = GROQ_MEDICAL_PROMPT.replace("{query}", query);
     
-    console.log(`Sending medical query to Groq fallback: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
+    console.log(`Sending medical query to Groq: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
     
     // Call Groq API with retries built in
     const response = await callGroqAPI(medicalPrompt);
-    return { text: response };
+    console.log("Successfully got Groq response for query");
+    return { text: response, source: "groq" };
   } catch (error) {
     console.error("Failed to generate Groq content:", error);
     
@@ -182,7 +221,8 @@ export const generateGroqContent = async (query: string): Promise<{ text: string
             `6. FOOD-BASED TREATMENTS\n` +
             `• Unable to provide food-based treatment information at this time\n\n` +
             `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
-      error: errorMessage
+      error: errorMessage,
+      source: "local-fallback"
     };
   }
 };

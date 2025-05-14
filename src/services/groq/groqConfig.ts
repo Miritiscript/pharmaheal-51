@@ -2,7 +2,8 @@
 export const GROQ_CONFIG = {
   API_URL: "https://api.groq.com/openai/v1/chat/completions",
   MODEL: "llama-3.1-70b-versatile", // Using Llama 3.1 70B model
-  API_KEY: import.meta.env.VITE_GROQ_API_KEY || "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", // Fallback to hardcoded API key if env is not available
+  // Use environment variable with fallback to hardcoded API key
+  API_KEY: import.meta.env.VITE_GROQ_API_KEY || "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",
   DEFAULT_PARAMS: {
     temperature: 0.7,
     max_tokens: 4096,
@@ -11,6 +12,15 @@ export const GROQ_CONFIG = {
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000
 } as const;
+
+// Log config on load (without exposing API key)
+console.log("Groq config loaded:", {
+  API_URL: GROQ_CONFIG.API_URL,
+  MODEL: GROQ_CONFIG.MODEL,
+  API_KEY_LENGTH: GROQ_CONFIG.API_KEY?.length || 0,
+  API_KEY_PRESENT: !!GROQ_CONFIG.API_KEY,
+  MAX_RETRIES: GROQ_CONFIG.MAX_RETRIES
+});
 
 export const GROQ_MEDICAL_PROMPT = `
 You are PharmaGPT, a highly specialized medical AI assistant. Your job is to provide clear, structured, and evidence-based information about the query. 

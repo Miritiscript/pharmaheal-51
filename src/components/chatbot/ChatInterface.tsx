@@ -108,7 +108,7 @@ const ChatInterface: React.FC = () => {
     }
   }, [messages, currentChatId]);
 
-  // Auto-retry logic
+  // Auto-retry logic with better logging
   useEffect(() => {
     if (currentQueryForRetry && retryCount > 0 && retryCount <= MAX_RETRIES) {
       const doRetry = async () => {
@@ -139,20 +139,28 @@ const ChatInterface: React.FC = () => {
       // Call Gemini API for pharmacy information with Groq fallback
       const pharmacyResponse = await generatePharmacyResponse(input);
       
-      console.log("Response received:", pharmacyResponse ? "success" : "undefined");
+      console.log("Response received:", pharmacyResponse ? 
+        `Success - Source: ${pharmacyResponse.source || "unknown"}` : 
+        "undefined");
       
       if (!pharmacyResponse || !pharmacyResponse.text) {
         throw new Error("No response received from the medical service.");
       }
       
-      // Check if this response came from fallback mechanism
-      const isFromFallback = pharmacyResponse.error !== undefined;
+      // Check response source with enhanced logging
+      const responseSource = pharmacyResponse.source || 'unknown';
+      console.log(`Response came from ${responseSource} source`);
       
-      // Update API status
-      if (isFromFallback) {
+      // Update API status based on source
+      if (responseSource === 'gemini') {
+        setApiStatus(prev => ({...prev, gemini: 'active', groq: 'standby'}));
+        console.log("Gemini API is active and working");
+      } else if (responseSource === 'groq') {
         setApiStatus(prev => ({...prev, gemini: 'failed', groq: 'active'}));
-      } else {
-        setApiStatus(prev => ({...prev, gemini: 'active'}));
+        console.log("Gemini API failed, Groq API is active");
+      } else if (responseSource === 'local-fallback') {
+        setApiStatus(prev => ({...prev, gemini: 'failed', groq: 'failed'}));
+        console.log("Both Gemini and Groq failed, using local fallback");
       }
       
       const aiResponse: Message = {
@@ -161,7 +169,8 @@ const ChatInterface: React.FC = () => {
         isUser: false,
         timestamp: new Date(),
         pharmacyData: pharmacyResponse,
-        fallbackUsed: isFromFallback
+        fallbackUsed: responseSource !== 'gemini',
+        source: responseSource
       };
       
       setMessages(prev => [...prev, aiResponse]);
@@ -171,9 +180,13 @@ const ChatInterface: React.FC = () => {
       setCurrentQueryForRetry(null);
       setLastError(null);
       
-      // Show success toast for user feedback
-      toast.success(isFromFallback ? "Response received from fallback system" : "Response received", { 
-        description: "Medical information retrieved" + (isFromFallback ? " using fallback system" : " successfully"), 
+      // Show success toast with source information
+      let sourceDescription = "primary AI";
+      if (responseSource === 'groq') sourceDescription = "fallback AI";
+      if (responseSource === 'local-fallback' || responseSource === 'error-fallback') sourceDescription = "local fallback";
+      
+      toast.success(`Response received from ${sourceDescription}`, { 
+        description: "Medical information retrieved" + (responseSource !== 'gemini' ? " using backup system" : " successfully"), 
         duration: 3000 
       });
       
@@ -202,13 +215,17 @@ const ChatInterface: React.FC = () => {
           errorMessage = error.message;
           
           // Special handling for Content Security Policy errors
-          if (errorMessage.includes("Content Security Policy")) {
+          if (errorMessage.includes("Content Security Policy") || 
+              errorMessage.includes("blocked by CORS policy") ||
+              errorMessage.includes("NetworkError")) {
             errorMessage = "Network connection to AI services is blocked. " +
                           "Please check your network settings or try using a different network.";
           }
           
           // Special handling for API key errors
-          if (errorMessage.includes("unregistered callers") || errorMessage.includes("API Key")) {
+          if (errorMessage.includes("unregistered callers") || 
+              errorMessage.includes("API Key") ||
+              errorMessage.includes("key authentication failed")) {
             errorMessage = "AI service authentication failed. Please contact support as the API key may be invalid.";
           }
         } else {
@@ -221,7 +238,8 @@ const ChatInterface: React.FC = () => {
           content: errorMessage,
           isUser: false,
           timestamp: new Date(),
-          error: true
+          error: true,
+          source: 'error'
         };
         
         setMessages(prev => [...prev, errorMsg]);
@@ -348,6 +366,19 @@ const ChatInterface: React.FC = () => {
           </div>
         )}
         
+        {/* Source Indicator - show which AI service was used last */}
+        {messages.length > 1 && !isLoading && (
+          <div className="text-xs text-center text-muted-foreground mt-2">
+            {messages[messages.length - 1].source === 'gemini' && 
+              '✓ Last response from Gemini AI'}
+            {messages[messages.length - 1].source === 'groq' && 
+              '⚠️ Last response from Llama AI (fallback)'}
+            {(messages[messages.length - 1].source === 'local-fallback' || 
+              messages[messages.length - 1].source === 'error-fallback') && 
+              '⚠️ Last response from local database (emergency fallback)'}
+          </div>
+        )}
+        
         {/* Retry Button */}
         {lastError && !isLoading && retryCount >= MAX_RETRIES && (
           <div className="flex justify-center my-2">
@@ -373,3 +404,4 @@ const ChatInterface: React.FC = () => {
 };
 
 export default ChatInterface;
+

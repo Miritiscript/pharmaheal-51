@@ -1,4 +1,3 @@
-
 import { generateGeminiContent, checkMedicalRelevance } from './medical/geminiClient';
 import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
 import { diseaseAliasesMap } from './medical/diseaseAliases';
@@ -24,6 +23,7 @@ export interface GeminiResponse {
   };
   isRelevant?: boolean;
   error?: string;
+  source?: string; // Track which system provided the response
 }
 
 // Medical abbreviation synonyms for preprocessing
@@ -182,6 +182,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
         enhancedQuery: enhancedQuery,
         timestamp: new Date(),
         isRelevant: isRelevant,
+        source: response.source || "unknown",
         // Extract key medical terms that matched in the query
         medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
           normalizedQuery.includes(term.toLowerCase())
@@ -194,6 +195,12 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       // Enhance the response with parsed categories
       const enhancedResponse = enhanceGeminiResponse(initialResponse);
       console.log("Enhanced response with categories:", Object.keys(enhancedResponse.categories || {}));
+      
+      // Maintain source information through the enhancement
+      if (!enhancedResponse.source && response.source) {
+        enhancedResponse.source = response.source;
+      }
+      
       return enhancedResponse;
     } catch (error) {
       console.error("Gemini API failed, falling back to Groq:", error);
@@ -213,6 +220,7 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
           enhancedQuery: enhancedQuery,
           timestamp: new Date(),
           isRelevant: true,
+          source: response.source || "groq",
           medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
             normalizedQuery.includes(term.toLowerCase())
           ).map(term => ({
@@ -241,7 +249,8 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       enhancedQuery: query,
       timestamp: new Date(),
       isRelevant: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
+      source: "error-fallback"
     };
     
     // For specific disease queries that are failing, provide a default structured response

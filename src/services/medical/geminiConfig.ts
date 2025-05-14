@@ -4,21 +4,23 @@ import { GeminiConfig } from "./types";
 // TypeScript interface for Gemini configuration
 export const GEMINI_CONFIG: GeminiConfig = {
   API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
-  API_KEY: import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY", // Fallback to hardcoded API key if env is not available
+  // Use environment variable with fallback to hardcoded key
+  API_KEY: import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCZYu9EiurIQVf13J3QvpHCgIoVJ2XOG-U",
   DEFAULT_PARAMS: {
     temperature: 0.7,
     topP: 0.8,
     topK: 40,
     maxOutputTokens: 2048,
   },
-  MAX_RETRIES: 2,
+  MAX_RETRIES: 3, // Increased retries for better reliability
   RETRY_DELAY: 1000,
   TIMEOUT_MS: 20000 // 20 second timeout
 };
 
-// Log config on load (not API key)
+// Enhanced logging on load (without exposing API key)
 console.log("Gemini config loaded:", {
   API_URL: GEMINI_CONFIG.API_URL,
+  API_KEY_LENGTH: GEMINI_CONFIG.API_KEY?.length || 0,
   API_KEY_PRESENT: !!GEMINI_CONFIG.API_KEY,
   MAX_RETRIES: GEMINI_CONFIG.MAX_RETRIES,
   TIMEOUT_MS: GEMINI_CONFIG.TIMEOUT_MS

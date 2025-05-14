@@ -58,11 +58,11 @@
 [build.processing]
   skip_processing = false
 
-# Updated CSP headers to allow all required resources including API endpoints
+# Updated CSP headers to allow all required resources including API endpoints and Supabase
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://api.groq.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://img.youtube.com https://i.ytimg.com https://*.unsplash.com https://*.googleusercontent.com blob: /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com https://www.youtube.com; media-src 'self' https://*.youtube.com https://www.youtube.com;"
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://api.groq.com https://*.youtube.com https://*.googleapis.com https://*.supabase.co https://*.supabase.in; img-src 'self' data: https://*.ytimg.com https://img.youtube.com https://i.ytimg.com https://*.unsplash.com https://*.googleusercontent.com blob: /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com https://www.youtube.com; media-src 'self' https://*.youtube.com https://www.youtube.com;"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"

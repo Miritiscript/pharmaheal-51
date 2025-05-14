@@ -1,3 +1,4 @@
+
 import { GeminiResponse } from "@/services/geminiService";
 
 export interface Message {
@@ -8,6 +9,7 @@ export interface Message {
   pharmacyData?: any;
   fallbackUsed?: boolean;
   error?: boolean;
+  source?: string; // Added source property to track which system provided the response
 }
 
 export interface ChatHistory {

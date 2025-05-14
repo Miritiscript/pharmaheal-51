@@ -1,24 +1,8 @@
 
-# Netlify configuration file
 [build]
   publish = "dist"
   command = "npm run build"
-  environment = { NODE_VERSION = "18.19.0" }
 
-# Handle SPA routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Compression settings
-[build.processing]
-  css = { bundle = true, minify = true }
-  js = { bundle = true, minify = true }
-  html = { pretty_urls = true }
-  images = { compress = true }
-
-# Security headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -26,44 +10,9 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*; font-src 'self'; connect-src 'self' https://*.supabase.co https://supabase.co https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://*.lovable.ai https://*.lovable.app https://*.lovable.dev wss://*.supabase.co; frame-src 'self'; media-src 'self';"
 
-# Page-specific headers
-[[headers]]
-  for = "*.js"
-  [headers.values]
-    Cache-Control = "public, max-age=604800"
-
-[[headers]]
-  for = "*.css"
-  [headers.values]
-    Cache-Control = "public, max-age=604800"
-
-[[headers]]
-  for = "*.jpg"
-  [headers.values]
-    Cache-Control = "public, max-age=2592000"
-
-[[headers]]
-  for = "*.png"
-  [headers.values]
-    Cache-Control = "public, max-age=2592000"
-
-[[headers]]
-  for = "*.svg"
-  [headers.values]
-    Cache-Control = "public, max-age=2592000"
-
-# Disable asset optimization to avoid any potential issues
-[build.processing]
-  skip_processing = false
-
-# Updated CSP headers to allow all required resources including API endpoints and Supabase
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://api.groq.com https://*.youtube.com https://*.googleapis.com https://*.supabase.co https://*.supabase.in; img-src 'self' data: https://*.ytimg.com https://img.youtube.com https://i.ytimg.com https://*.unsplash.com https://*.googleusercontent.com blob: /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com https://www.youtube.com; media-src 'self' https://*.youtube.com https://www.youtube.com;"
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,10 +1,8 @@
-
-import { GEMINI_CONFIG } from './geminiConfig';
-import { generateGroqContent } from '../groq/groqClient';
+import { GEMINI_CONFIG, GEMINI_MEDICAL_PROMPT, GEMINI_RELEVANCE_PROMPT } from './geminiConfig';
 import { generateLocalFallbackResponse } from './localFallback';
 
 /**
- * Calls Gemini API with enhanced retry mechanism and better error reporting
+ * Calls the Gemini API with enhanced retry mechanism
  */
 export const callGeminiAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Gemini API with prompt:", prompt.substring(0, 100) + "...");
@@ -179,95 +177,9 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
   throw lastError || new Error("Failed to call Gemini API after retries");
 };
 
-// Generate content using main medical prompt with improved error handling
-// Now with Groq fallback and detailed source tracking
-export const generateGeminiContent = async (query: string): Promise<{ text: string, error?: string, source?: string }> => {
-  try {
-    // Import the medical prompt template from config
-    const { MEDICAL_PROMPT_TEMPLATE } = await import('./geminiConfig');
-    
-    // Replace the placeholder with the actual query
-    const medicalPrompt = MEDICAL_PROMPT_TEMPLATE.replace("{query}", query);
-    
-    console.log(`Attempting primary Gemini service with query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
-    
-    // Try to get a response from Gemini with retries built in
-    try {
-      console.log("Attempting Gemini API call...");
-      const response = await callGeminiAPI(medicalPrompt);
-      
-      // Validate the response contains the expected format with enhanced logging
-      console.log("Validating Gemini response format...");
-      
-      // This is a simple check to see if the response has bullet points and section headers
-      const hasExpectedFormat = response.includes("•") && 
-        (response.includes("DISEASE DESCRIPTION") || 
-         response.includes("DRUG RECOMMENDATIONS"));
-      
-      if (!hasExpectedFormat) {
-        console.warn("Gemini response does not match expected format:", 
-          response.substring(0, 200) + "...");
-        console.log("Falling back to Groq due to invalid response format");
-        throw new Error("Invalid response format from Gemini");
-      }
-      
-      console.log("Successfully validated Gemini response");
-      return { text: response, source: "gemini" };
-    } catch (geminiError) {
-      console.error("Gemini API failed, detailed error:", geminiError);
-      console.log("Falling back to Groq API...");
-      
-      // If Gemini fails, try Groq as a fallback
-      try {
-        console.log("Using Groq as fallback for query:", query);
-        const groqResponse = await generateGroqContent(query);
-        console.log("Successfully retrieved Groq fallback response");
-        return { ...groqResponse, source: "groq" };
-      } catch (groqError) {
-        console.error("Both Gemini and Groq APIs failed:", groqError);
-        throw new Error(`Both primary and secondary AI services failed: ${geminiError.message} / ${groqError.message}`);
-      }
-    }
-  } catch (error) {
-    console.error("Failed to generate content with both Gemini and Groq:", error);
-    
-    // Ultimate fallback if both providers fail - generate response locally
-    try {
-      console.log("Using local fallback as last resort...");
-      const fallbackResponse = await generateLocalFallbackResponse(query);
-      console.log("Successfully generated local fallback response");
-      return { text: fallbackResponse, source: "local-fallback" };
-    } catch (localFallbackError) {
-      // If even local fallback fails, return a simple error message
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error("Final error - even local fallback failed:", localFallbackError);
-      
-      return { 
-        text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
-              `1. DISEASE DESCRIPTION\n` +
-              `• The system is currently unable to provide details about this condition\n` +
-              `• Please try again later or try rephrasing your query\n` +
-              `• Error details: ${errorMessage}\n\n` +
-              `2. DRUG RECOMMENDATIONS\n` +
-              `• Unable to provide medication information at this time\n` +
-              `• Please consult with a healthcare professional\n\n` +
-              `3. SIDE EFFECTS & INDICATIONS\n` +
-              `• Unable to provide side effect information at this time\n\n` +
-              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
-              `• Unable to provide contraindication information at this time\n\n` +
-              `5. HERBAL MEDICINE ALTERNATIVES\n` +
-              `• Unable to provide herbal medicine information at this time\n\n` +
-              `6. FOOD-BASED TREATMENTS\n` +
-              `• Unable to provide food-based treatment information at this time\n\n` +
-              `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
-        error: errorMessage,
-        source: "error-fallback"
-      };
-    }
-  }
-};
-
-// Check if a query is medically relevant with improved error handling
+/**
+ * Check if a query is medically relevant using Gemini
+ */
 export const checkMedicalRelevance = async (query: string): Promise<boolean> => {
   try {
     // Import the relevance check prompt from config
@@ -419,5 +331,96 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
     // Default to accepting the query if there's an error (fail open)
     console.log("Accepting query due to relevance check error");
     return true;
+  }
+};
+
+/**
+ * Generate content using Gemini AI
+ */
+export const generateGeminiContent = async (query: string): Promise<{ text: string, error?: string, source?: string }> => {
+  try {
+    // Import the medical prompt template from config
+    const { MEDICAL_PROMPT_TEMPLATE } = await import('./geminiConfig');
+    
+    // Replace the placeholder with the actual query
+    const medicalPrompt = MEDICAL_PROMPT_TEMPLATE.replace("{query}", query);
+    
+    console.log(`Attempting primary Gemini service with query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
+    
+    // Try to get a response from Gemini with retries built in
+    try {
+      console.log("Attempting Gemini API call...");
+      const response = await callGeminiAPI(medicalPrompt);
+      
+      // Validate the response contains the expected format with enhanced logging
+      console.log("Validating Gemini response format...");
+      
+      // This is a simple check to see if the response has bullet points and section headers
+      const hasExpectedFormat = response.includes("•") && 
+        (response.includes("DISEASE DESCRIPTION") || 
+         response.includes("DRUG RECOMMENDATIONS"));
+      
+      if (!hasExpectedFormat) {
+        console.warn("Gemini response does not match expected format:", 
+          response.substring(0, 200) + "...");
+        console.log("Falling back to Groq due to invalid response format");
+        throw new Error("Invalid response format from Gemini");
+      }
+      
+      console.log("Successfully validated Gemini response");
+      
+      // Update to include source property
+      return { text: response, source: "gemini" };
+    } catch (geminiError) {
+      console.error("Gemini API failed, detailed error:", geminiError);
+      console.log("Falling back to Groq API...");
+      
+      // If Gemini fails, try Groq as a fallback
+      try {
+        console.log("Using Groq as fallback for query:", query);
+        const groqResponse = await generateGroqContent(query);
+        console.log("Successfully retrieved Groq fallback response");
+        return { ...groqResponse, source: "groq" };
+      } catch (groqError) {
+        console.error("Both Gemini and Groq APIs failed:", groqError);
+        throw new Error(`Both primary and secondary AI services failed: ${geminiError.message} / ${groqError.message}`);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to generate content with both Gemini and Groq:", error);
+    
+    // Ultimate fallback if both providers fail - generate response locally
+    try {
+      console.log("Using local fallback as last resort...");
+      const fallbackResponse = await generateLocalFallbackResponse(query);
+      console.log("Successfully generated local fallback response");
+      return { text: fallbackResponse, source: "local-fallback" };
+    } catch (localFallbackError) {
+      // If even local fallback fails, return a simple error message
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Final error - even local fallback failed:", localFallbackError);
+      
+      return { 
+        text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
+              `1. DISEASE DESCRIPTION\n` +
+              `• The system is currently unable to provide details about this condition\n` +
+              `• Please try again later or try rephrasing your query\n` +
+              `• Error details: ${errorMessage}\n\n` +
+              `2. DRUG RECOMMENDATIONS\n` +
+              `• Unable to provide medication information at this time\n` +
+              `• Please consult with a healthcare professional\n\n` +
+              `3. SIDE EFFECTS & INDICATIONS\n` +
+              `• Unable to provide side effect information at this time\n\n` +
+              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
+              `• Unable to provide contraindication information at this time\n\n` +
+              `5. HERBAL MEDICINE ALTERNATIVES\n` +
+              `• Unable to provide herbal medicine information at this time\n\n` +
+              `6. FOOD-BASED TREATMENTS\n` +
+              `• Unable to provide food-based treatment information at this time\n\n` +
+              `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
+        error: errorMessage,
+        source: "error-fallback"
+      };
+    }
   }
 };

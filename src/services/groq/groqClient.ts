@@ -186,7 +186,7 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
 };
 
 // Generate content using Groq with enhanced error handling and logging
-export const generateGroqContent = async (query: string): Promise<{ text: string, error?: string }> => {
+export const generateGroqContent = async (query: string): Promise<{ text: string, error?: string, source?: string }> => {
   try {
     // Replace the placeholder with the actual query
     const medicalPrompt = GROQ_MEDICAL_PROMPT.replace("{query}", query);

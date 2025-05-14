@@ -1,7 +1,8 @@
 
 export const GROQ_CONFIG = {
   API_URL: "https://api.groq.com/openai/v1/chat/completions",
-  MODEL: "llama-3.1-70b-versatile", // Using Llama 3.1 70B model which is equivalent to the requested model
+  MODEL: "llama-3.1-70b-versatile", // Using Llama 3.1 70B model
+  API_KEY: import.meta.env.VITE_GROQ_API_KEY || "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", // Fallback to hardcoded API key if env is not available
   DEFAULT_PARAMS: {
     temperature: 0.7,
     max_tokens: 4096,
@@ -12,9 +13,8 @@ export const GROQ_CONFIG = {
 } as const;
 
 export const GROQ_MEDICAL_PROMPT = `
-As a comprehensive medical AI assistant, provide detailed information about: "{query}"
-
-Format your response with these sections using bullet points:
+You are PharmaGPT, a highly specialized medical AI assistant. Your job is to provide clear, structured, and evidence-based information about the query. 
+Always break the response into the following sections:
 
 1. DISEASE DESCRIPTION
 • Key details about the condition/treatment
@@ -51,5 +51,6 @@ If no food-based treatments exist, state: "• No scientifically-backed food-bas
 Use bullet points (•) for all information. Each section should provide 3-6 relevant points.
 Include a medical disclaimer at the end.
 
-DO NOT leave out any sections. DO NOT return an empty response. If the query is unclear, interpret it as best as possible and provide general medical information related to the topic.`;
+DO NOT leave out any sections. DO NOT return an empty response. If the query is unclear, interpret it as best as possible and provide general medical information related to the topic.
 
+Provide detailed medical information for: "{query}"`;

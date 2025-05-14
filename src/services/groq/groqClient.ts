@@ -8,16 +8,13 @@ import { generateLocalFallbackResponse } from '../medical/localFallback';
 export const callGroqAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Groq API with prompt:", prompt.substring(0, 100) + "...");
   
-  // Use the local fallback endpoint if we're in development or Supabase endpoint is failing
-  const useLocalFallback = import.meta.env.DEV || localStorage.getItem('use_local_groq_fallback') === 'true';
+  // Check if we need to use local fallback
+  const useLocalFallback = !GROQ_CONFIG.API_KEY || import.meta.env.DEV || localStorage.getItem('use_local_groq_fallback') === 'true';
   
-  // Default to API fallback in case edge function isn't available
-  const GROQ_ENDPOINT = useLocalFallback 
-    ? '/api/groq-fallback'
-    : import.meta.env.VITE_GROQ_FALLBACK_URL || 
-      "https://zmjjyoifprnkeitbklpa.supabase.co/functions/v1/groq-fallback";
-  
-  console.log("Using Groq endpoint:", GROQ_ENDPOINT);
+  if (useLocalFallback) {
+    console.log("Using local fallback for Groq API (no API key or in development mode)");
+    return await generateLocalFallbackResponse(prompt);
+  }
   
   let attempts = 0;
   let lastError = null;
@@ -30,25 +27,14 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       
-      // If we're using the development fallback, don't actually make an API call
-      if (GROQ_ENDPOINT === '/api/groq-fallback') {
-        console.log("Using local mock Groq API response");
-        clearTimeout(timeoutId);
-        
-        // Generate a synthetic response locally to avoid API calls
-        const mockResponse = await generateLocalFallbackResponse(prompt);
-        return mockResponse;
-      }
-      
       try {
-        // Call the Groq fallback endpoint
-        console.log(`Sending request to: ${GROQ_ENDPOINT}`);
-        const response = await fetch(GROQ_ENDPOINT, {
+        // Call the Groq API directly
+        console.log(`Sending request to Groq API using model: ${GROQ_CONFIG.MODEL}`);
+        const response = await fetch(GROQ_CONFIG.API_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`
+            "Authorization": `Bearer ${GROQ_CONFIG.API_KEY}`
           },
           body: JSON.stringify({
             model: GROQ_CONFIG.MODEL,

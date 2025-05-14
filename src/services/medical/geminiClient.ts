@@ -1,4 +1,3 @@
-
 import { GEMINI_CONFIG } from './geminiConfig';
 import { generateGroqContent } from '../groq/groqClient';
 import { generateLocalFallbackResponse } from './localFallback';

@@ -15,6 +15,11 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
   while (attempts <= GEMINI_CONFIG.MAX_RETRIES) {
     try {
       console.log(`API attempt ${attempts + 1}...`);
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GEMINI_CONFIG.TIMEOUT_MS);
+      
       const response = await fetch(`${GEMINI_CONFIG.API_URL}?key=${GEMINI_CONFIG.API_KEY}`, {
         method: "POST",
         headers: {
@@ -32,7 +37,11 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
           ],
           generationConfig: GEMINI_CONFIG.DEFAULT_PARAMS,
         }),
+        signal: controller.signal
       });
+      
+      // Clear the timeout since we got a response
+      clearTimeout(timeoutId);
 
       // Check for HTTP errors
       if (!response.ok) {
@@ -66,6 +75,11 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
     } catch (error) {
       lastError = error;
       console.warn(`Gemini API attempt ${attempts + 1} failed:`, error);
+      
+      // Handle timeouts specifically
+      if (error.name === 'AbortError') {
+        console.error("Request timed out after", GEMINI_CONFIG.TIMEOUT_MS, "ms");
+      }
       
       // If we've reached max retries, throw the error
       if (attempts >= GEMINI_CONFIG.MAX_RETRIES) {

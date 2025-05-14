@@ -121,8 +121,16 @@ const ChatInterface: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Call Gemini API for pharmacy information
+      console.log("Sending pharmacy query:", input);
+      
+      // Call Gemini API for pharmacy information with Groq fallback
       const pharmacyResponse = await generatePharmacyResponse(input);
+      
+      console.log("Response received:", pharmacyResponse ? "success" : "undefined");
+      
+      if (!pharmacyResponse || !pharmacyResponse.text) {
+        throw new Error("No response received from the medical service.");
+      }
       
       const aiResponse: Message = {
         id: uuidv4(),
@@ -133,6 +141,13 @@ const ChatInterface: React.FC = () => {
       };
       
       setMessages(prev => [...prev, aiResponse]);
+      
+      // Show success toast for user feedback
+      toast.success("Response received", { 
+        description: "Medical information retrieved successfully", 
+        duration: 3000 
+      });
+      
     } catch (error) {
       console.error('Error getting pharmacy response:', error);
       
@@ -154,7 +169,11 @@ const ChatInterface: React.FC = () => {
       
       setMessages(prev => [...prev, errorMsg]);
       
-      toast.error(errorMessage, { duration: 5000 });
+      toast.error("Error retrieving medical information", { 
+        description: errorMessage.substring(0, 100) + (errorMessage.length > 100 ? '...' : ''), 
+        duration: 5000 
+      });
+      
       uiToast({
         title: "Error",
         description: errorMessage,

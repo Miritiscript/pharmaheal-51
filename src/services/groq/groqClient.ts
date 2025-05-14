@@ -1,3 +1,4 @@
+
 import { GROQ_CONFIG, GROQ_MEDICAL_PROMPT } from './groqConfig';
 
 /**
@@ -6,8 +7,7 @@ import { GROQ_CONFIG, GROQ_MEDICAL_PROMPT } from './groqConfig';
 export const callGroqAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Groq API with prompt:", prompt.substring(0, 100) + "...");
   
-  // We'll use the fetch API with the SUPABASE_FUNCTIONS_URL environment variable
-  // This approach allows us to keep the API key secure
+  // We'll use the fetch API with our local API endpoint
   let attempts = 0;
   let lastError = null;
   
@@ -15,7 +15,11 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
     try {
       console.log(`Groq API attempt ${attempts + 1}...`);
       
-      // Call the Supabase Edge Function that will make the actual Groq API request
+      // Add a timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      // Call our local endpoint that simulates the Supabase Edge Function
       const response = await fetch("/api/groq-fallback", {
         method: "POST",
         headers: {
@@ -33,7 +37,11 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
           max_tokens: GROQ_CONFIG.DEFAULT_PARAMS.max_tokens,
           top_p: GROQ_CONFIG.DEFAULT_PARAMS.top_p
         }),
+        signal: controller.signal
       });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
 
       // Check for HTTP errors
       if (!response.ok) {
@@ -48,6 +56,11 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       console.log("Groq API raw response:", JSON.stringify(data).substring(0, 200) + "...");
       
       // Extract the response text
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error("Invalid structure in Groq response:", data);
+        throw new Error("Invalid structure in Groq response");
+      }
+      
       const responseText = data.choices[0].message.content;
       
       if (!responseText || responseText.trim().length < 20) {
@@ -61,6 +74,11 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
     } catch (error) {
       lastError = error;
       console.warn(`Groq API attempt ${attempts + 1} failed:`, error);
+      
+      // Handle timeouts specifically
+      if (error.name === 'AbortError') {
+        console.error("Groq request timed out after 10 seconds");
+      }
       
       if (attempts >= GROQ_CONFIG.MAX_RETRIES) {
         console.error("Max retries reached for Groq API, giving up");
@@ -96,8 +114,21 @@ export const generateGroqContent = async (query: string): Promise<{ text: string
     if (error instanceof Error) {
       return { 
         text: `I'm sorry, I couldn't retrieve information about your query from either our primary or fallback systems. All AI language models are currently unavailable.\n\n` +
-              `Please try again later or contact our support team.\n\n` +
-              `Error details: ${error.message}\n\n` +
+              `1. DISEASE DESCRIPTION\n` +
+              `• The system is currently unable to provide details about this condition\n` +
+              `• Please try again later or try rephrasing your query\n` +
+              `• Error details: ${error.message}\n\n` +
+              `2. DRUG RECOMMENDATIONS\n` +
+              `• Unable to provide medication information at this time\n` +
+              `• Please consult with a healthcare professional\n\n` +
+              `3. SIDE EFFECTS & INDICATIONS\n` +
+              `• Unable to provide side effect information at this time\n\n` +
+              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
+              `• Unable to provide contraindication information at this time\n\n` +
+              `5. HERBAL MEDICINE ALTERNATIVES\n` +
+              `• Unable to provide herbal medicine information at this time\n\n` +
+              `6. FOOD-BASED TREATMENTS\n` +
+              `• Unable to provide food-based treatment information at this time\n\n` +
               `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`
       };
     }

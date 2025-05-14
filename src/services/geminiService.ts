@@ -1,3 +1,4 @@
+
 import { generateGeminiContent, checkMedicalRelevance } from './medical/geminiClient';
 import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
 import { diseaseAliasesMap } from './medical/diseaseAliases';
@@ -168,30 +169,68 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     console.log(`Processing medical query: ${expandedQuery}`);
     
     // Try Gemini with fallback to Groq
-    const response = await generateGeminiContent(expandedQuery);
-    
-    console.log("Received AI response of length:", response.text.length);
-    
-    // Build the initial response
-    const initialResponse: GeminiResponse = {
-      text: response.text,
-      query: query,
-      enhancedQuery: enhancedQuery,
-      timestamp: new Date(),
-      isRelevant: isRelevant,
-      // Extract key medical terms that matched in the query
-      medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
-        normalizedQuery.includes(term.toLowerCase())
-      ).map(term => ({
-        colloquial: term,
-        standard: diseaseAliasesMap[term]
-      }))
-    };
-    
-    // Enhance the response with parsed categories
-    const enhancedResponse = enhanceGeminiResponse(initialResponse);
-    console.log("Enhanced response with categories:", Object.keys(enhancedResponse.categories || {}));
-    return enhancedResponse;
+    try {
+      console.log("Attempting to get response from primary Gemini API...");
+      const response = await generateGeminiContent(expandedQuery);
+      
+      console.log("Received AI response of length:", response.text.length);
+      
+      // Build the initial response
+      const initialResponse: GeminiResponse = {
+        text: response.text,
+        query: query,
+        enhancedQuery: enhancedQuery,
+        timestamp: new Date(),
+        isRelevant: isRelevant,
+        // Extract key medical terms that matched in the query
+        medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
+          normalizedQuery.includes(term.toLowerCase())
+        ).map(term => ({
+          colloquial: term,
+          standard: diseaseAliasesMap[term]
+        }))
+      };
+      
+      // Enhance the response with parsed categories
+      const enhancedResponse = enhanceGeminiResponse(initialResponse);
+      console.log("Enhanced response with categories:", Object.keys(enhancedResponse.categories || {}));
+      return enhancedResponse;
+    } catch (error) {
+      console.error("Gemini API failed, falling back to Groq:", error);
+      
+      // Attempt fallback to Groq
+      try {
+        const response = await import('../services/groq/groqClient').then(module => 
+          module.generateGroqContent(expandedQuery)
+        );
+        
+        console.log("Successfully received Groq fallback response of length:", response.text.length);
+        
+        // Build the initial response with fallback flag
+        const initialResponse: GeminiResponse = {
+          text: response.text,
+          query: query,
+          enhancedQuery: enhancedQuery,
+          timestamp: new Date(),
+          isRelevant: true,
+          medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
+            normalizedQuery.includes(term.toLowerCase())
+          ).map(term => ({
+            colloquial: term,
+            standard: diseaseAliasesMap[term]
+          }))
+        };
+        
+        // Enhance the fallback response
+        const enhancedResponse = enhanceGeminiResponse(initialResponse);
+        console.log("Enhanced Groq fallback response with categories:", 
+          Object.keys(enhancedResponse.categories || {}));
+        return enhancedResponse;
+      } catch (fallbackError) {
+        console.error("Both Gemini and Groq fallback failed:", fallbackError);
+        throw error; // Throw the original error if both fail
+      }
+    }
   } catch (error) {
     console.error("Error generating pharmacy response:", error);
     

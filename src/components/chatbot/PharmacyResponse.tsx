@@ -9,7 +9,12 @@ interface PharmacyResponseProps {
 
 const PharmacyResponse: React.FC<PharmacyResponseProps> = ({ response }) => {
   // For debugging - log the full response to see what we're getting
-  console.log("Pharmacy response received:", response);
+  console.log("Pharmacy response received:", {
+    textLength: response.text?.length || 0,
+    hasCategories: !!response.categories,
+    categoryKeys: response.categories ? Object.keys(response.categories) : [],
+    error: response.error || 'none'
+  });
   
   // Check if the response indicates an unsupported or irrelevant query
   if (response.text?.includes("not a valid medical query") || 

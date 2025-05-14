@@ -13,9 +13,20 @@ interface ChatMessageProps {
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false }) => {
   const { theme } = useTheme();
   
+  // Debug output to help trace rendering issues
+  if (message.pharmacyData) {
+    console.log("Rendering message with pharmacy data:", {
+      messageId: message.id,
+      hasText: !!message.pharmacyData.text,
+      hasCategories: !!message.pharmacyData.categories,
+      timestamp: message.timestamp
+    });
+  }
+  
   return (
     <div
       className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+      data-message-id={message.id}
     >
       <div
         className={`max-w-[90%] ${

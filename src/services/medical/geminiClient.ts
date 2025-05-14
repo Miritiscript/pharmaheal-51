@@ -1,4 +1,3 @@
-
 import { GEMINI_CONFIG } from './geminiConfig';
 import { generateGroqContent } from '../groq/groqClient';
 
@@ -20,23 +19,38 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), GEMINI_CONFIG.TIMEOUT_MS);
       
-      const response = await fetch(`${GEMINI_CONFIG.API_URL}?key=${GEMINI_CONFIG.API_KEY}`, {
+      // API Key debug
+      const apiKey = GEMINI_CONFIG.API_KEY || "";
+      console.log(`Using API Key: ${apiKey ? "Key available (length: " + apiKey.length + ")" : "No API key found!"}`);
+      
+      // Model debug
+      console.log(`API URL: ${GEMINI_CONFIG.API_URL}`);
+      
+      // Request debug - don't log the actual API key
+      console.log(`Request URL: ${GEMINI_CONFIG.API_URL}?key=API_KEY_REDACTED`);
+      
+      // Format the request body
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: GEMINI_CONFIG.DEFAULT_PARAMS,
+      };
+      
+      console.log("Request body:", JSON.stringify(requestBody).substring(0, 200) + "...");
+      
+      const response = await fetch(`${GEMINI_CONFIG.API_URL}?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: GEMINI_CONFIG.DEFAULT_PARAMS,
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
       
@@ -47,6 +61,7 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: { message: `HTTP error ${response.status}` }}));
         console.error("Gemini API HTTP error:", errorData);
+        console.error(`Status: ${response.status}, StatusText: ${response.statusText}`);
         throw new Error(errorData.error?.message || `HTTP error ${response.status}: ${response.statusText}`);
       }
 
@@ -101,7 +116,7 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
 
 // Generate content using main medical prompt with improved error handling
 // Now with Groq fallback
-export const generateGeminiContent = async (query: string): Promise<{ text: string }> => {
+export const generateGeminiContent = async (query: string): Promise<{ text: string, error?: string }> => {
   try {
     // Import the medical prompt template from config
     const { MEDICAL_PROMPT_TEMPLATE } = await import('./geminiConfig');
@@ -136,29 +151,29 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
     console.error("Failed to generate content with both Gemini and Groq:", error);
     
     // Ultimate fallback if both providers fail
-    if (error instanceof Error) {
-      return { 
-        text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
-              `1. DISEASE DESCRIPTION\n` +
-              `• The system is currently unable to provide details about this condition\n` +
-              `• Please try again later or try rephrasing your query\n` +
-              `• Error details: ${error.message}\n\n` +
-              `2. DRUG RECOMMENDATIONS\n` +
-              `• Unable to provide medication information at this time\n` +
-              `• Please consult with a healthcare professional\n\n` +
-              `3. SIDE EFFECTS & INDICATIONS\n` +
-              `• Unable to provide side effect information at this time\n\n` +
-              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
-              `• Unable to provide contraindication information at this time\n\n` +
-              `5. HERBAL MEDICINE ALTERNATIVES\n` +
-              `• Unable to provide herbal medicine information at this time\n\n` +
-              `6. FOOD-BASED TREATMENTS\n` +
-              `• Unable to provide food-based treatment information at this time\n\n` +
-              `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`
-      };
-    }
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Final error message:", errorMessage);
     
-    throw error;
+    return { 
+      text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
+            `1. DISEASE DESCRIPTION\n` +
+            `• The system is currently unable to provide details about this condition\n` +
+            `• Please try again later or try rephrasing your query\n` +
+            `• Error details: ${errorMessage}\n\n` +
+            `2. DRUG RECOMMENDATIONS\n` +
+            `• Unable to provide medication information at this time\n` +
+            `• Please consult with a healthcare professional\n\n` +
+            `3. SIDE EFFECTS & INDICATIONS\n` +
+            `• Unable to provide side effect information at this time\n\n` +
+            `4. CONTRAINDICATIONS & INTERACTIONS\n` +
+            `• Unable to provide contraindication information at this time\n\n` +
+            `5. HERBAL MEDICINE ALTERNATIVES\n` +
+            `• Unable to provide herbal medicine information at this time\n\n` +
+            `6. FOOD-BASED TREATMENTS\n` +
+            `• Unable to provide food-based treatment information at this time\n\n` +
+            `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
+      error: errorMessage
+    };
   }
 };
 

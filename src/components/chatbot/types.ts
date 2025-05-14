@@ -1,4 +1,3 @@
-
 import { GeminiResponse } from "@/services/geminiService";
 
 export interface Message {
@@ -6,8 +5,9 @@ export interface Message {
   content: string;
   isUser: boolean;
   timestamp: Date;
-  pharmacyData?: GeminiResponse;
+  pharmacyData?: any;
   fallbackUsed?: boolean;
+  error?: boolean;
 }
 
 export interface ChatHistory {

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bot, User } from 'lucide-react';
+import { Bot, User, AlertTriangle } from 'lucide-react';
 import PharmacyResponse from './PharmacyResponse';
 import { Message } from './types';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -32,20 +32,25 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false })
         className={`max-w-[90%] ${
           message.isUser
             ? 'bg-primary text-primary-foreground rounded-t-xl rounded-bl-xl'
-            : theme === 'dark' 
-              ? 'bg-slate-800 border border-slate-700 text-slate-100 rounded-t-xl rounded-br-xl' 
-              : 'glass rounded-t-xl rounded-br-xl'
+            : message.error 
+              ? 'bg-red-50 border border-red-300 dark:bg-red-900/20 dark:border-red-800 text-red-800 dark:text-red-200 rounded-t-xl rounded-br-xl'
+              : theme === 'dark' 
+                ? 'bg-slate-800 border border-slate-700 text-slate-100 rounded-t-xl rounded-br-xl' 
+                : 'glass rounded-t-xl rounded-br-xl'
         } p-3 shadow-sm`}
       >
         <div className="flex items-start gap-2">
-          {!message.isUser && (
+          {!message.isUser && !message.error && (
             <Bot className="w-5 h-5 mt-1 text-primary shrink-0" />
+          )}
+          {!message.isUser && message.error && (
+            <AlertTriangle className="w-5 h-5 mt-1 text-red-500 shrink-0" />
           )}
           {message.isUser && (
             <User className="w-5 h-5 mt-1 text-white shrink-0" />
           )}
           <div className="w-full">
-            {message.pharmacyData ? (
+            {message.pharmacyData && !message.error ? (
               <PharmacyResponse response={message.pharmacyData} />
             ) : (
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -55,6 +60,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false })
               {message.fallbackUsed && (
                 <span className="ml-2 text-amber-500 font-medium">
                   (fallback)
+                </span>
+              )}
+              {message.error && (
+                <span className="ml-2 text-red-500 font-medium">
+                  (error)
                 </span>
               )}
             </span>

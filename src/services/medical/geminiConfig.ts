@@ -3,7 +3,7 @@ import { GeminiConfig } from "./types";
 
 // TypeScript interface for Gemini configuration
 export const GEMINI_CONFIG: GeminiConfig = {
-  API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+  API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent",
   API_KEY: import.meta.env.VITE_GEMINI_API_KEY || "",
   DEFAULT_PARAMS: {
     temperature: 0.7,
@@ -15,6 +15,14 @@ export const GEMINI_CONFIG: GeminiConfig = {
   RETRY_DELAY: 1000,
   TIMEOUT_MS: 20000 // 20 second timeout
 };
+
+// Log config on load (not API key)
+console.log("Gemini config loaded:", {
+  API_URL: GEMINI_CONFIG.API_URL,
+  API_KEY_PRESENT: !!GEMINI_CONFIG.API_KEY,
+  MAX_RETRIES: GEMINI_CONFIG.MAX_RETRIES,
+  TIMEOUT_MS: GEMINI_CONFIG.TIMEOUT_MS
+});
 
 // Medical prompt template for consistent responses
 export const MEDICAL_PROMPT_TEMPLATE = `

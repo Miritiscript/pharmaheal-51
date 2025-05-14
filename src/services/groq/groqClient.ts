@@ -10,6 +10,8 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
   const GROQ_ENDPOINT = import.meta.env.VITE_GROQ_FALLBACK_URL || 
                         "https://zmjjyoifprnkeitbklpa.supabase.co/functions/v1/groq-fallback";
   
+  console.log("Using Groq endpoint:", GROQ_ENDPOINT);
+  
   let attempts = 0;
   let lastError = null;
   
@@ -108,7 +110,7 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
 };
 
 // Generate content using Groq
-export const generateGroqContent = async (query: string): Promise<{ text: string }> => {
+export const generateGroqContent = async (query: string): Promise<{ text: string, error?: string }> => {
   try {
     // Replace the placeholder with the actual query
     const medicalPrompt = GROQ_MEDICAL_PROMPT.replace("{query}", query);
@@ -122,28 +124,27 @@ export const generateGroqContent = async (query: string): Promise<{ text: string
     console.error("Failed to generate Groq content:", error);
     
     // Create a user-friendly fallback response
-    if (error instanceof Error) {
-      return { 
-        text: `I'm sorry, I couldn't retrieve information about your query from either our primary or fallback systems. All AI language models are currently unavailable.\n\n` +
-              `1. DISEASE DESCRIPTION\n` +
-              `• The system is currently unable to provide details about this condition\n` +
-              `• Please try again later or try rephrasing your query\n` +
-              `• Error details: ${error.message}\n\n` +
-              `2. DRUG RECOMMENDATIONS\n` +
-              `• Unable to provide medication information at this time\n` +
-              `• Please consult with a healthcare professional\n\n` +
-              `3. SIDE EFFECTS & INDICATIONS\n` +
-              `• Unable to provide side effect information at this time\n\n` +
-              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
-              `• Unable to provide contraindication information at this time\n\n` +
-              `5. HERBAL MEDICINE ALTERNATIVES\n` +
-              `• Unable to provide herbal medicine information at this time\n\n` +
-              `6. FOOD-BASED TREATMENTS\n` +
-              `• Unable to provide food-based treatment information at this time\n\n` +
-              `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`
-      };
-    }
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     
-    throw error;
+    return { 
+      text: `I'm sorry, I couldn't retrieve information about your query from either our primary or fallback systems. All AI language models are currently unavailable.\n\n` +
+            `1. DISEASE DESCRIPTION\n` +
+            `• The system is currently unable to provide details about this condition\n` +
+            `• Please try again later or try rephrasing your query\n` +
+            `• Error details: ${errorMessage}\n\n` +
+            `2. DRUG RECOMMENDATIONS\n` +
+            `• Unable to provide medication information at this time\n` +
+            `• Please consult with a healthcare professional\n\n` +
+            `3. SIDE EFFECTS & INDICATIONS\n` +
+            `• Unable to provide side effect information at this time\n\n` +
+            `4. CONTRAINDICATIONS & INTERACTIONS\n` +
+            `• Unable to provide contraindication information at this time\n\n` +
+            `5. HERBAL MEDICINE ALTERNATIVES\n` +
+            `• Unable to provide herbal medicine information at this time\n\n` +
+            `6. FOOD-BASED TREATMENTS\n` +
+            `• Unable to provide food-based treatment information at this time\n\n` +
+            `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
+      error: errorMessage
+    };
   }
 };

@@ -7,8 +7,19 @@ import './index.css';
 // Check if we're in development mode
 const isDev = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname.includes('.lovable.dev');
 
-if (isDev) {
-  console.log('Application running in development mode');
+// Clear browser cache for development or preview builds
+if (isDev || window.location.hostname.includes('preview')) {
+  console.log('Application running in development/preview mode');
+  
+  // Clear application cache
+  if ('caches' in window) {
+    caches.keys().then(cacheNames => {
+      cacheNames.forEach(cacheName => {
+        console.log(`Clearing cache: ${cacheName}`);
+        caches.delete(cacheName);
+      });
+    });
+  }
   
   // In development mode, unregister any service workers
   if ('serviceWorker' in navigator) {
@@ -19,6 +30,10 @@ if (isDev) {
       }
     });
   }
+  
+  // Clear local storage for clean testing (optional, comment if needed)
+  // localStorage.clear();
+  // console.log('Local storage cleared for development');
 }
 
 // Make sure the root container has a background that fills the entire viewport

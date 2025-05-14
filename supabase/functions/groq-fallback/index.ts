@@ -24,7 +24,7 @@ serve(async (req) => {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info"
   };
 
   // Handle CORS preflight requests
@@ -34,14 +34,21 @@ serve(async (req) => {
   }
 
   try {
+    // Parse the request body
     const requestData = await req.json();
     console.log("Request received:", JSON.stringify(requestData).substring(0, 200) + "...");
     
-    const { model = "llama-3.1-70b-versatile", messages, temperature = 0.7, max_tokens = 4096, top_p = 1.0 } = requestData as RequestBody;
-    
-    // Get the first user message content for logging
-    const query = messages.find(m => m.role === "user")?.content || "";
+    // Extract the query from the messages
+    const query = requestData.messages?.find(m => m.role === "user")?.content || "";
     console.log(`Processing query: "${query.substring(0, 100)}${query.length > 100 ? '...' : ''}"`);
+    
+    const { 
+      model = "llama-3.1-70b-versatile", 
+      messages, 
+      temperature = 0.7, 
+      max_tokens = 4096, 
+      top_p = 1.0 
+    } = requestData as RequestBody;
     
     // Get the Groq API key from environment variables
     const apiKey = Deno.env.get("GROQ_API_KEY");

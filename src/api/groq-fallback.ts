@@ -26,6 +26,10 @@ export default async function handler(req: Request): Promise<Response> {
       firstMessagePreview: messages?.[0]?.content?.substring(0, 50)
     });
     
+    // Extract the first user message for better logging
+    const userMessage = messages?.find((m: any) => m.role === 'user')?.content || '';
+    console.log(`Processing query: "${userMessage.substring(0, 100)}${userMessage.length > 100 ? '...' : ''}"`);
+    
     // In a real implementation, this would call the Groq API
     // For this simulation, we'll return a formatted mock response
     // that matches the expected structure from the Gemini client
@@ -92,7 +96,8 @@ Medical Disclaimer: This information is provided by an AI fallback system and is
     console.error("Error in mock Groq endpoint:", error);
     return new Response(JSON.stringify({ 
       error: "Internal server error",
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      fallbackMessage: "Sorry, we're unable to find a response right now. Please try again later."
     }), {
       status: 500,
       headers: {

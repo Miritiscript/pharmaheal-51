@@ -52,6 +52,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false })
             )}
             <span className="text-xs opacity-70 mt-1 block text-right">
               {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {message.fallbackUsed && (
+                <span className="ml-2 text-amber-500 font-medium">
+                  (fallback)
+                </span>
+              )}
             </span>
           </div>
         </div>

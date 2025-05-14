@@ -7,6 +7,7 @@ export interface Message {
   isUser: boolean;
   timestamp: Date;
   pharmacyData?: GeminiResponse;
+  fallbackUsed?: boolean;
 }
 
 export interface ChatHistory {

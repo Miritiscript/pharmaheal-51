@@ -7,7 +7,9 @@ import { GROQ_CONFIG, GROQ_MEDICAL_PROMPT } from './groqConfig';
 export const callGroqAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Groq API with prompt:", prompt.substring(0, 100) + "...");
   
-  // We'll use the fetch API with our local API endpoint
+  const GROQ_ENDPOINT = import.meta.env.VITE_GROQ_FALLBACK_URL || 
+                        "https://zmjjyoifprnkeitbklpa.supabase.co/functions/v1/groq-fallback";
+  
   let attempts = 0;
   let lastError = null;
   
@@ -17,10 +19,11 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       
       // Add a timeout to prevent hanging requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       
-      // Call our local endpoint that simulates the Supabase Edge Function
-      const response = await fetch("/api/groq-fallback", {
+      // Call the Groq fallback endpoint
+      console.log(`Sending request to: ${GROQ_ENDPOINT}`);
+      const response = await fetch(GROQ_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,6 +50,7 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Groq API HTTP error:", errorText);
+        console.error(`Status: ${response.status}, StatusText: ${response.statusText}`);
         throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
       }
 
@@ -58,6 +62,13 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       // Extract the response text
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         console.error("Invalid structure in Groq response:", data);
+        
+        // Check for fallback message in error
+        if (data.fallbackMessage) {
+          console.log("Using fallback message from error response");
+          return data.fallbackMessage;
+        }
+        
         throw new Error("Invalid structure in Groq response");
       }
       
@@ -77,7 +88,7 @@ export const callGroqAPI = async (prompt: string): Promise<string> => {
       
       // Handle timeouts specifically
       if (error.name === 'AbortError') {
-        console.error("Groq request timed out after 10 seconds");
+        console.error("Groq request timed out after 15 seconds");
       }
       
       if (attempts >= GROQ_CONFIG.MAX_RETRIES) {

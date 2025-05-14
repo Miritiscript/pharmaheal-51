@@ -50,6 +50,7 @@ const ChatInterface: React.FC = () => {
   });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const { toast: uiToast } = useToast();
 
@@ -119,6 +120,7 @@ const ChatInterface: React.FC = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    setRetryCount(0); // Reset retry count for new message
 
     try {
       console.log("Sending pharmacy query:", input);
@@ -132,19 +134,24 @@ const ChatInterface: React.FC = () => {
         throw new Error("No response received from the medical service.");
       }
       
+      // Check if this response came from fallback mechanism
+      const isFromFallback = pharmacyResponse.text.includes("fallback") || 
+                             pharmacyResponse.error !== undefined;
+      
       const aiResponse: Message = {
         id: uuidv4(),
         content: pharmacyResponse.text,
         isUser: false,
         timestamp: new Date(),
         pharmacyData: pharmacyResponse,
+        fallbackUsed: isFromFallback
       };
       
       setMessages(prev => [...prev, aiResponse]);
       
       // Show success toast for user feedback
-      toast.success("Response received", { 
-        description: "Medical information retrieved successfully", 
+      toast.success(isFromFallback ? "Response received from fallback system" : "Response received", { 
+        description: "Medical information retrieved" + (isFromFallback ? " using fallback system" : " successfully"), 
         duration: 3000 
       });
       

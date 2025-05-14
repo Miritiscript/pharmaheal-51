@@ -18,7 +18,13 @@ export default defineConfig(({ mode }) => ({
     }
   },
   plugins: [
-    react(),
+    react({
+      // Enable all features for best compatibility
+      jsxImportSource: "@emotion/react",
+      babel: {
+        plugins: ["@emotion/babel-plugin"]
+      }
+    }),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
@@ -58,4 +64,6 @@ export default defineConfig(({ mode }) => ({
     'import.meta.env.DEV': mode === 'development',
     'import.meta.env.PROD': mode === 'production',
   },
+  // Add base URL for production builds on Netlify
+  base: '/',
 }));

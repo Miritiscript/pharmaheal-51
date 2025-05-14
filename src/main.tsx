@@ -30,10 +30,6 @@ if (isDev || window.location.hostname.includes('preview')) {
       }
     });
   }
-  
-  // Clear local storage for clean testing (optional, comment if needed)
-  // localStorage.clear();
-  // console.log('Local storage cleared for development');
 }
 
 // Make sure the root container has a background that fills the entire viewport

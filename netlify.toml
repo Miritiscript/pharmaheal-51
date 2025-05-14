@@ -2,6 +2,7 @@
 [build]
   publish = "dist"
   command = "npm run build"
+  environment = { NODE_VERSION = "18" }
 
 # Handle SPA routing
 [[redirects]]

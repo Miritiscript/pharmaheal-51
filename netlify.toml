@@ -49,7 +49,7 @@
 [build.processing]
   skip_processing = false
 
-# Updated CSP headers to allow all required resources including YouTube thumbnails and Unsplash images
+# Updated CSP headers to allow all required resources including Supabase connections
 [[headers]]
   for = "/*"
   [headers.values]

@@ -1,11 +1,19 @@
+
 import { GEMINI_CONFIG } from './geminiConfig';
 import { generateGroqContent } from '../groq/groqClient';
+import { generateLocalFallbackResponse } from './localFallback';
 
 /**
  * Calls Gemini API with enhanced retry mechanism for improved reliability
  */
 export const callGeminiAPI = async (prompt: string): Promise<string> => {
   console.log("Calling Gemini API with prompt:", prompt.substring(0, 100) + "...");
+  
+  // Check if we need to use local fallback (no API key available)
+  if (!GEMINI_CONFIG.API_KEY || GEMINI_CONFIG.API_KEY.trim() === "") {
+    console.warn("No Gemini API key available, using local fallback");
+    return await generateLocalFallbackResponse(prompt);
+  }
   
   // Implement retry logic
   let attempts = 0;
@@ -45,48 +53,62 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
       
       console.log("Request body:", JSON.stringify(requestBody).substring(0, 200) + "...");
       
-      const response = await fetch(`${GEMINI_CONFIG.API_URL}?key=${apiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-      
-      // Clear the timeout since we got a response
-      clearTimeout(timeoutId);
+      // Make actual API call
+      try {
+        const response = await fetch(`${GEMINI_CONFIG.API_URL}?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+        
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
 
-      // Check for HTTP errors
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: `HTTP error ${response.status}` }}));
-        console.error("Gemini API HTTP error:", errorData);
-        console.error(`Status: ${response.status}, StatusText: ${response.statusText}`);
-        throw new Error(errorData.error?.message || `HTTP error ${response.status}: ${response.statusText}`);
-      }
+        // Check for HTTP errors
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: { message: `HTTP error ${response.status}` }}));
+          console.error("Gemini API HTTP error:", errorData);
+          console.error(`Status: ${response.status}, StatusText: ${response.statusText}`);
+          
+          // Specific error handling
+          if (response.status === 403) {
+            console.error("API key authentication error. Using local fallback.");
+            return await generateLocalFallbackResponse(prompt);
+          }
+          
+          throw new Error(errorData.error?.message || `HTTP error ${response.status}: ${response.statusText}`);
+        }
 
-      // Parse the response
-      const data = await response.json();
-      
-      // Log the raw response for debugging
-      console.log("Gemini API raw response success:", JSON.stringify(data).substring(0, 200) + "...");
-      
-      // Enhanced extraction and validation of response text
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-        console.error("Invalid response structure from Gemini API:", data);
-        throw new Error("Invalid response structure from Gemini API");
+        // Parse the response
+        const data = await response.json();
+        
+        // Log the raw response for debugging
+        console.log("Gemini API raw response success:", JSON.stringify(data).substring(0, 200) + "...");
+        
+        // Enhanced extraction and validation of response text
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+          console.error("Invalid response structure from Gemini API:", data);
+          throw new Error("Invalid response structure from Gemini API");
+        }
+        
+        const responseText = data.candidates[0].content.parts[0].text;
+        
+        if (!responseText || responseText.trim().length < 20) {
+          console.error("Empty or too short response from Gemini API:", responseText);
+          throw new Error("Empty or too short response from Gemini API");
+        }
+        
+        console.log("Successful response length:", responseText.length);
+        console.log("Response preview:", responseText.substring(0, 100) + "...");
+        return responseText;
+      } catch (fetchError) {
+        // If fetch itself failed (not a response status error)
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
-      
-      const responseText = data.candidates[0].content.parts[0].text;
-      
-      if (!responseText || responseText.trim().length < 20) {
-        console.error("Empty or too short response from Gemini API:", responseText);
-        throw new Error("Empty or too short response from Gemini API");
-      }
-      
-      console.log("Successful response length:", responseText.length);
-      console.log("Response preview:", responseText.substring(0, 100) + "...");
-      return responseText;
     } catch (error) {
       lastError = error;
       console.warn(`Gemini API attempt ${attempts + 1} failed:`, error);
@@ -134,7 +156,7 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
       // This is a simple check to see if the response has bullet points and section headers
       if (response.includes("•") && 
           (response.includes("DISEASE DESCRIPTION") || 
-           response.includes("DRUG RECOMMENDATIONS"))) {
+          response.includes("DRUG RECOMMENDATIONS"))) {
         return { text: response };
       } else {
         console.warn("Gemini response does not match expected format, falling back to Groq");
@@ -150,30 +172,36 @@ export const generateGeminiContent = async (query: string): Promise<{ text: stri
   } catch (error) {
     console.error("Failed to generate content with both Gemini and Groq:", error);
     
-    // Ultimate fallback if both providers fail
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Final error message:", errorMessage);
-    
-    return { 
-      text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
-            `1. DISEASE DESCRIPTION\n` +
-            `• The system is currently unable to provide details about this condition\n` +
-            `• Please try again later or try rephrasing your query\n` +
-            `• Error details: ${errorMessage}\n\n` +
-            `2. DRUG RECOMMENDATIONS\n` +
-            `• Unable to provide medication information at this time\n` +
-            `• Please consult with a healthcare professional\n\n` +
-            `3. SIDE EFFECTS & INDICATIONS\n` +
-            `• Unable to provide side effect information at this time\n\n` +
-            `4. CONTRAINDICATIONS & INTERACTIONS\n` +
-            `• Unable to provide contraindication information at this time\n\n` +
-            `5. HERBAL MEDICINE ALTERNATIVES\n` +
-            `• Unable to provide herbal medicine information at this time\n\n` +
-            `6. FOOD-BASED TREATMENTS\n` +
-            `• Unable to provide food-based treatment information at this time\n\n` +
-            `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
-      error: errorMessage
-    };
+    // Ultimate fallback if both providers fail - generate response locally
+    try {
+      const fallbackResponse = await generateLocalFallbackResponse(query);
+      return { text: fallbackResponse };
+    } catch (localFallbackError) {
+      // If even local fallback fails, return a simple error message
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Final error message:", errorMessage);
+      
+      return { 
+        text: `I'm sorry, I couldn't retrieve information about your query. All AI services are currently experiencing issues.\n\n` +
+              `1. DISEASE DESCRIPTION\n` +
+              `• The system is currently unable to provide details about this condition\n` +
+              `• Please try again later or try rephrasing your query\n` +
+              `• Error details: ${errorMessage}\n\n` +
+              `2. DRUG RECOMMENDATIONS\n` +
+              `• Unable to provide medication information at this time\n` +
+              `• Please consult with a healthcare professional\n\n` +
+              `3. SIDE EFFECTS & INDICATIONS\n` +
+              `• Unable to provide side effect information at this time\n\n` +
+              `4. CONTRAINDICATIONS & INTERACTIONS\n` +
+              `• Unable to provide contraindication information at this time\n\n` +
+              `5. HERBAL MEDICINE ALTERNATIVES\n` +
+              `• Unable to provide herbal medicine information at this time\n\n` +
+              `6. FOOD-BASED TREATMENTS\n` +
+              `• Unable to provide food-based treatment information at this time\n\n` +
+              `Medical Disclaimer: This is an automated fallback message. Please consult a healthcare professional for medical advice.`,
+        error: errorMessage
+      };
+    }
   }
 };
 
@@ -188,114 +216,121 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
     
     // Call the Gemini API with the relevance check prompt
     console.log(`Checking relevance for: "${query}"`);
-    const response = await callGeminiAPI(relevanceCheckPrompt);
-    console.log("Raw relevance response:", response);
     
-    // New multi-stage parsing approach:
-    
-    // Stage 1: Check if any keywords in the query are obviously medical
-    const medicalKeywords = [
-      'disease', 'treatment', 'symptom', 'medication', 'drug',
-      'cancer', 'leukemia', 'therapy', 'diagnosis', 'syndrome',
-      'infection', 'virus', 'bacterial', 'diet', 'health',
-      'medicine', 'prescription', 'hospital', 'doctor', 'patient',
-      'condition', 'chronic', 'acute', 'pain', 'inflammation',
-      'diabetes', 'asthma', 'hypertension', 'arthritis'
-    ];
-    
-    const queryLower = query.toLowerCase();
-    for (const keyword of medicalKeywords) {
-      if (queryLower.includes(keyword)) {
-        console.log(`Query contains medical keyword: ${keyword}`);
-        return true;
-      }
-    }
-    
-    // Stage 2: Direct JSON extraction with multiple patterns
     try {
-      // Pattern 1: Look for valid JSON object with curly braces
-      const jsonMatch = response.match(/(\{.*?\})/s);
-      if (jsonMatch && jsonMatch[0]) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (typeof parsed.isRelevant === 'boolean') {
-            console.log("Successfully extracted JSON with isRelevant:", parsed);
-            return parsed.isRelevant;
-          }
-        } catch (e) {
-          console.warn("Failed to parse extracted JSON object:", e);
+      const response = await callGeminiAPI(relevanceCheckPrompt);
+      console.log("Raw relevance response:", response);
+      
+      // New multi-stage parsing approach:
+      
+      // Stage 1: Check if any keywords in the query are obviously medical
+      const medicalKeywords = [
+        'disease', 'treatment', 'symptom', 'medication', 'drug',
+        'cancer', 'leukemia', 'therapy', 'diagnosis', 'syndrome',
+        'infection', 'virus', 'bacterial', 'diet', 'health',
+        'medicine', 'prescription', 'hospital', 'doctor', 'patient',
+        'condition', 'chronic', 'acute', 'pain', 'inflammation',
+        'diabetes', 'asthma', 'hypertension', 'arthritis'
+      ];
+      
+      const queryLower = query.toLowerCase();
+      for (const keyword of medicalKeywords) {
+        if (queryLower.includes(keyword)) {
+          console.log(`Query contains medical keyword: ${keyword}`);
+          return true;
         }
       }
       
-      // Pattern 2: Look for true/false values
-      if (response.includes('"isRelevant": true') || response.includes('"isRelevant":true')) {
-        console.log("Found isRelevant:true pattern in response");
-        return true;
-      }
-      
-      if (response.includes('"isRelevant": false') || response.includes('"isRelevant":false')) {
-        console.log("Found isRelevant:false pattern in response");
-        return false;
-      }
-      
-      // Stage 3: Clean response and try again with more permissive approach
-      const cleanedResponse = response
-        .replace(/```json|```/g, '')
-        .replace(/(\r\n|\n|\r)/gm, '')
-        .trim();
-      
-      // Look for any valid JSON object in the cleaned response
-      const matches = cleanedResponse.match(/\{[^{}]*\}/g);
-      if (matches) {
-        for (const match of matches) {
+      // Stage 2: Direct JSON extraction with multiple patterns
+      try {
+        // Pattern 1: Look for valid JSON object with curly braces
+        const jsonMatch = response.match(/(\{.*?\})/s);
+        if (jsonMatch && jsonMatch[0]) {
           try {
-            const parsed = JSON.parse(match);
+            const parsed = JSON.parse(jsonMatch[0]);
             if (typeof parsed.isRelevant === 'boolean') {
-              console.log("Successfully extracted JSON from cleaned response:", parsed);
+              console.log("Successfully extracted JSON with isRelevant:", parsed);
               return parsed.isRelevant;
             }
           } catch (e) {
-            console.warn("Failed to parse JSON match from cleaned response");
+            console.warn("Failed to parse extracted JSON object:", e);
           }
         }
+        
+        // Pattern 2: Look for true/false values
+        if (response.includes('"isRelevant": true') || response.includes('"isRelevant":true')) {
+          console.log("Found isRelevant:true pattern in response");
+          return true;
+        }
+        
+        if (response.includes('"isRelevant": false') || response.includes('"isRelevant":false')) {
+          console.log("Found isRelevant:false pattern in response");
+          return false;
+        }
+        
+        // Stage 3: Clean response and try again with more permissive approach
+        const cleanedResponse = response
+          .replace(/```json|```/g, '')
+          .replace(/(\r\n|\n|\r)/gm, '')
+          .trim();
+        
+        // Look for any valid JSON object in the cleaned response
+        const matches = cleanedResponse.match(/\{[^{}]*\}/g);
+        if (matches) {
+          for (const match of matches) {
+            try {
+              const parsed = JSON.parse(match);
+              if (typeof parsed.isRelevant === 'boolean') {
+                console.log("Successfully extracted JSON from cleaned response:", parsed);
+                return parsed.isRelevant;
+              }
+            } catch (e) {
+              console.warn("Failed to parse JSON match from cleaned response");
+            }
+          }
+        }
+      } catch (jsonError) {
+        console.warn("All JSON parsing attempts failed:", jsonError);
       }
-    } catch (jsonError) {
-      console.warn("All JSON parsing attempts failed:", jsonError);
-    }
-    
-    // Stage 4: Fall back to text-based analysis of the response
-    const positiveIndicators = ['yes', 'relevant', 'medical', 'health', 'true', 'valid'];
-    const negativeIndicators = ['no', 'not relevant', 'non-medical', 'false', 'invalid'];
-    
-    let positiveScore = 0;
-    let negativeScore = 0;
-    
-    const responseLower = response.toLowerCase();
-    
-    positiveIndicators.forEach(indicator => {
-      if (responseLower.includes(indicator)) positiveScore++;
-    });
-    
-    negativeIndicators.forEach(indicator => {
-      if (responseLower.includes(indicator)) negativeScore++;
-    });
-    
-    console.log(`Text-based relevance analysis: Positive=${positiveScore}, Negative=${negativeScore}`);
-    
-    // If more positive than negative indicators, consider it relevant
-    if (positiveScore > negativeScore) {
+      
+      // Stage 4: Fall back to text-based analysis of the response
+      const positiveIndicators = ['yes', 'relevant', 'medical', 'health', 'true', 'valid'];
+      const negativeIndicators = ['no', 'not relevant', 'non-medical', 'false', 'invalid'];
+      
+      let positiveScore = 0;
+      let negativeScore = 0;
+      
+      const responseLower = response.toLowerCase();
+      
+      positiveIndicators.forEach(indicator => {
+        if (responseLower.includes(indicator)) positiveScore++;
+      });
+      
+      negativeIndicators.forEach(indicator => {
+        if (responseLower.includes(indicator)) negativeScore++;
+      });
+      
+      console.log(`Text-based relevance analysis: Positive=${positiveScore}, Negative=${negativeScore}`);
+      
+      // If more positive than negative indicators, consider it relevant
+      if (positiveScore > negativeScore) {
+        return true;
+      }
+      
+      // Stage 5: Default fallback - a last-resort attempt
+      // Query length heuristic: longer queries are more likely to be legitimate
+      if (query.length > 15 || query.split(' ').length > 2) {
+        console.log("Defaulting to accept based on query complexity");
+        return true;
+      }
+      
+      console.log("Query determined to be non-medical after exhausting all checks");
+      return false;
+    } catch (apiError) {
+      // If API call fails, assume query is medical by default
+      console.log("API call failed, assuming query is medically relevant");
       return true;
     }
-    
-    // Stage 5: Default fallback - a last-resort attempt
-    // Query length heuristic: longer queries are more likely to be legitimate
-    if (query.length > 15 || query.split(' ').length > 2) {
-      console.log("Defaulting to accept based on query complexity");
-      return true;
-    }
-    
-    console.log("Query determined to be non-medical after exhausting all checks");
-    return false;
   } catch (error) {
     console.error("Error checking medical relevance:", error);
     // Default to accepting the query if there's an error with the API

@@ -1,26 +1,58 @@
 
 import React from 'react';
-import { Pill, RefreshCw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface ChatHeaderProps {
   onReset: () => void;
+  apiStatus?: {
+    gemini: string;
+    groq: string;
+  };
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ onReset }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ onReset, apiStatus }) => {
   return (
-    <div className="p-4 border-b border-border flex justify-between items-center">
-      <div className="flex items-center space-x-2">
-        <Pill className="w-5 h-5 text-primary" />
-        <h2 className="font-semibold">Pharmacy Assistant</h2>
-      </div>
-      <div className="flex items-center">
-        <button
-          className="p-2 text-muted-foreground hover:text-foreground rounded-full"
-          aria-label="Reset conversation"
+    <div className="bg-card border-b border-border p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">PharmaHeal Assistant</h2>
+          <p className="text-sm text-muted-foreground">
+            Ask about diseases, medications & treatments
+          </p>
+          
+          {/* API Status Indicators */}
+          {apiStatus && (
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              <div className="flex items-center">
+                <span className="mr-1">Gemini:</span>
+                <span className={`inline-block w-2 h-2 rounded-full ${
+                  apiStatus.gemini === 'active' ? 'bg-green-500' : 
+                  apiStatus.gemini === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+                }`}></span>
+              </div>
+              
+              <div className="flex items-center">
+                <span className="mr-1">Fallback:</span>
+                <span className={`inline-block w-2 h-2 rounded-full ${
+                  apiStatus.groq === 'active' ? 'bg-green-500' : 
+                  apiStatus.groq === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+                }`}></span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground"
           onClick={onReset}
+          title="Start new chat"
+          aria-label="Reset chat"
         >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+          <RotateCcw className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );

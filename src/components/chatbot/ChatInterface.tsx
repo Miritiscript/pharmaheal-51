@@ -54,6 +54,10 @@ const ChatInterface: React.FC = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [currentQueryForRetry, setCurrentQueryForRetry] = useState<string | null>(null);
   const [lastError, setLastError] = useState<Error | null>(null);
+  const [apiStatus, setApiStatus] = useState<{gemini: string; groq: string}>({
+    gemini: 'unknown',
+    groq: 'unknown'
+  });
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const { toast: uiToast } = useToast();
 
@@ -144,6 +148,13 @@ const ChatInterface: React.FC = () => {
       // Check if this response came from fallback mechanism
       const isFromFallback = pharmacyResponse.error !== undefined;
       
+      // Update API status
+      if (isFromFallback) {
+        setApiStatus(prev => ({...prev, gemini: 'failed', groq: 'active'}));
+      } else {
+        setApiStatus(prev => ({...prev, gemini: 'active'}));
+      }
+      
       const aiResponse: Message = {
         id: uuidv4(),
         content: pharmacyResponse.text,
@@ -169,6 +180,9 @@ const ChatInterface: React.FC = () => {
     } catch (error) {
       console.error('Error getting pharmacy response:', error);
       
+      // Update API status
+      setApiStatus({gemini: 'failed', groq: 'failed'});
+      
       // Store the error for retry logic
       setLastError(error instanceof Error ? error : new Error(String(error)));
       
@@ -186,6 +200,17 @@ const ChatInterface: React.FC = () => {
         
         if (error instanceof Error) {
           errorMessage = error.message;
+          
+          // Special handling for Content Security Policy errors
+          if (errorMessage.includes("Content Security Policy")) {
+            errorMessage = "Network connection to AI services is blocked. " +
+                          "Please check your network settings or try using a different network.";
+          }
+          
+          // Special handling for API key errors
+          if (errorMessage.includes("unregistered callers") || errorMessage.includes("API Key")) {
+            errorMessage = "AI service authentication failed. Please contact support as the API key may be invalid.";
+          }
         } else {
           errorMessage = "Please enter a valid medical prompt such as: disease name, description, drug recommendations, side effects, indications, contraindications, herbal medicine alternatives, or food-based treatments.";
         }
@@ -268,6 +293,7 @@ const ChatInterface: React.FC = () => {
     setRetryCount(0);
     setCurrentQueryForRetry(null);
     setLastError(null);
+    setApiStatus({gemini: 'unknown', groq: 'unknown'});
     
     toast.success("Chat has been reset", { duration: 3000 });
   };
@@ -303,7 +329,10 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[85vh] max-w-3xl mx-auto glass-card overflow-hidden">
-      <ChatHeader onReset={resetChat} />
+      <ChatHeader 
+        onReset={resetChat} 
+        apiStatus={apiStatus}
+      />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={chatWindowRef} id="chat-window">
         {messages.map((message) => (
@@ -311,6 +340,15 @@ const ChatInterface: React.FC = () => {
         ))}
         {isLoading && <LoadingMessage />}
         
+        {/* API Status Banner - show when both services are down */}
+        {apiStatus.gemini === 'failed' && apiStatus.groq === 'failed' && !isLoading && (
+          <div className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100 p-3 rounded-md text-sm mb-2">
+            <p className="font-semibold">⚠️ AI Service Status: Both services currently unavailable</p>
+            <p className="text-xs mt-1">Using local fallback system for responses. Some information may be limited.</p>
+          </div>
+        )}
+        
+        {/* Retry Button */}
         {lastError && !isLoading && retryCount >= MAX_RETRIES && (
           <div className="flex justify-center my-2">
             <button 

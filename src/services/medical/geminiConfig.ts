@@ -3,7 +3,7 @@ import { GeminiConfig } from "./types";
 
 // TypeScript interface for Gemini configuration
 export const GEMINI_CONFIG: GeminiConfig = {
-  API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent",
+  API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
   API_KEY: import.meta.env.VITE_GEMINI_API_KEY || "",
   DEFAULT_PARAMS: {
     temperature: 0.7,

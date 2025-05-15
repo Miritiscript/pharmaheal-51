@@ -1,7 +1,12 @@
 
 [build]
-  publish = "dist"
   command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NETLIFY_USE_YARN = "false"
+  NODE_VERSION = "18.19.0"
+  NPM_FLAGS = "--no-optional"
 
 [[headers]]
   for = "/*"
@@ -10,70 +15,30 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://* http://*; font-src 'self'; connect-src 'self' https://*.supabase.co https://supabase.co https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://*.lovable.ai https://*.lovable.app https://*.lovable.dev https://www.googleapis.com wss://*.supabase.co; frame-src 'self' https://www.youtube.com; media-src 'self';"
-
-# Fix MIME type issues for assets
-[[headers]]
-  for = "/*.css"
-  [headers.values]
-    Content-Type = "text/css"
-    Cache-Control = "public, max-age=31536000"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://*.supabase.co https://api.groq.com https://generativelanguage.googleapis.com https://*.googleapis.com wss://*.supabase.co; img-src 'self' data: blob: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self' https://youtube.com https://www.youtube.com;"
 
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Content-Type = "application/javascript"
-    Cache-Control = "public, max-age=31536000"
-
-# Fix for module scripts
-[[headers]]
-  for = "/assets/*.js"
-  [headers.values]
-    Content-Type = "application/javascript"
-    Cache-Control = "public, max-age=31536000"
+    Content-Type = "application/javascript; charset=utf-8"
 
 [[headers]]
-  for = "/*.png"
+  for = "/*.css"
   [headers.values]
-    Content-Type = "image/png"
-    Cache-Control = "public, max-age=31536000"
-
-[[headers]]
-  for = "/*.jpg"
-  [headers.values]
-    Content-Type = "image/jpeg"
-    Cache-Control = "public, max-age=31536000"
+    Content-Type = "text/css; charset=utf-8"
 
 [[headers]]
   for = "/*.svg"
   [headers.values]
     Content-Type = "image/svg+xml"
-    Cache-Control = "public, max-age=31536000"
 
 [[headers]]
-  for = "/*.ico"
+  for = "/service-worker.js"
   [headers.values]
-    Content-Type = "image/x-icon"
-    Cache-Control = "public, max-age=31536000"
+    Cache-Control = "max-age=0, no-cache, no-store, must-revalidate"
 
-# Handle SPA routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true
-
-# Specific rule for asset files to ensure proper MIME types
-[[redirects]]
-  from = "/assets/*"
-  to = "/assets/:splat"
-  status = 200
-  force = true
-
-# Fix for YouTube API calls
-[[redirects]]
-  from = "/youtube-proxy/*"
-  to = "https://www.googleapis.com/:splat"
-  status = 200
-  force = true
-  headers = {Access-Control-Allow-Origin = "*"}

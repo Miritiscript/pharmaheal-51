@@ -1,288 +1,238 @@
+// Version for cache management
+const CACHE_VERSION = 'pharmaheal-v12';
+const IMAGE_CACHE_VERSION = 'pharmaheal-images-v12';
 
-// Cache names - update version to refresh caches
-const CACHE_NAME = 'pharmaheal-v13';
-const DATA_CACHE_NAME = 'pharmaheal-data-v13';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v13';
-
-// Files to cache
-const urlsToCache = [
+// Resources to cache immediately
+const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/placeholder.svg',
   '/favicon.ico',
+  '/og-image.png',
   '/logo-icon.png',
-  '/logo-full.png',
-  '/placeholder.svg'
+  '/logo-full.png'
 ];
 
-// Local fallback images to pre-cache
-const fallbackImages = [
-  '/logo-icon.png',
-  '/logo-full.png',
-  '/favicon.ico',
-  '/placeholder.svg'
+// Fallback images to pre-cache
+const FALLBACK_IMAGES = [
+  '/placeholder.svg',
+  '/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png',
+  '/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png',
+  '/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png',
+  '/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png'
 ];
 
-// Check if we're in development mode
-const isDev = self.location.hostname === 'localhost' || 
-              self.location.hostname.includes('127.0.0.1') ||
-              self.location.hostname.includes('.lovable.dev');
-
-// Skip service worker activation in development mode
-if (isDev) {
-  self.addEventListener('install', (event) => {
-    self.skipWaiting();
-  });
-
-  self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-  });
-
-  // Pass through all requests without caching in development
-  self.addEventListener('fetch', (event) => {
-    event.respondWith(fetch(event.request).catch(() => {
-      console.log('Fetch failed for:', event.request.url);
-      return new Response('Network error happened', {
-        status: 408,
-        headers: { 'Content-Type': 'text/plain' },
+// Install event - cache core assets
+self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing...');
+  
+  // Skip waiting to ensure the new service worker activates immediately
+  self.skipWaiting();
+  
+  event.waitUntil(
+    // Cache core assets
+    caches.open(CACHE_VERSION).then((cache) => {
+      console.log('Opened cache for core files');
+      return cache.addAll(CORE_ASSETS);
+    }).then(() => {
+      // Cache fallback images separately
+      return caches.open(IMAGE_CACHE_VERSION).then((cache) => {
+        console.log('Pre-caching fallback images');
+        return cache.addAll(FALLBACK_IMAGES);
       });
-    }));
-  });
+    })
+  );
+});
+
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activating...');
   
-  console.log('Service Worker running in development mode - caching disabled');
-} else {
-  // Regular service worker behavior for production
+  // Take control of all clients immediately
+  self.clients.claim();
   
-  // Install event - caches static assets and fallback images
-  self.addEventListener('install', (event) => {
-    event.waitUntil(
-      Promise.all([
-        // Cache core files
-        caches.open(CACHE_NAME)
-          .then((cache) => {
-            console.log('Opened cache for core files');
-            return Promise.allSettled(
-              urlsToCache.map(url => 
-                cache.add(url).catch(err => {
-                  console.warn(`Failed to cache ${url}: ${err.message}`);
-                  return null;
-                })
-              )
-            );
-          }),
-        
-        // Cache fallback images separately
-        caches.open(IMAGE_CACHE_NAME)
-          .then((cache) => {
-            console.log('Pre-caching fallback images');
-            return Promise.allSettled(
-              fallbackImages.map(url => 
-                cache.add(url).catch(err => {
-                  console.warn(`Failed to cache fallback image ${url}: ${err.message}`);
-                  return null;
-                })
-              )
-            );
-          })
-      ])
-      .then(() => self.skipWaiting())
-      .catch(err => {
-        console.error('Service worker install failed:', err);
-      })
-    );
-  });
-
-  // Activate event - clean up old caches
-  self.addEventListener('activate', (event) => {
-    const cacheWhitelist = [CACHE_NAME, DATA_CACHE_NAME, IMAGE_CACHE_NAME];
-    
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheWhitelist.indexOf(cacheName) === -1) {
-              console.log('Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      }).then(() => self.clients.claim())
-    );
-  });
-
-  // Improved fetch event handler with better error reporting
-  self.addEventListener('fetch', (event) => {
-    const requestUrl = new URL(event.request.url);
-    
-    // Skip non-GET requests and browser extensions
-    if (event.request.method !== 'GET' || 
-        event.request.url.startsWith('chrome-extension://')) {
-      return;
-    }
-    
-    // Handle asset files (JS, CSS) - network first with cache fallback
-    if (requestUrl.pathname.match(/\.(js|css)$/) || requestUrl.pathname.includes('/assets/')) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            // Clone the response
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                try {
-                  cache.put(event.request, responseToCache);
-                } catch (err) {
-                  console.warn('Cache put error for assets:', err);
-                }
-              });
-              
-            return response;
-          })
-          .catch(() => {
-            console.warn(`Failed to fetch asset: ${event.request.url}, trying cache`);
-            return caches.match(event.request);
-          })
-      );
-      return;
-    }
-    
-    // For YouTube API requests - network only with error handling
-    if (requestUrl.href.includes('googleapis.com/youtube') || 
-        requestUrl.href.includes('youtube-proxy')) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            if (!response.ok) {
-              console.warn(`YouTube API returned ${response.status}: ${response.statusText}`);
-            }
-            return response;
-          })
-          .catch(error => {
-            console.error('YouTube API fetch failed:', error);
-            return new Response(JSON.stringify({ 
-              error: { message: 'Failed to connect to YouTube API' } 
-            }), {
-              status: 503,
-              headers: {'Content-Type': 'application/json'}
-            });
-          })
-      );
-      return;
-    }
-    
-    // For YouTube thumbnail images - network with cache fallback
-    if (requestUrl.href.includes('ytimg.com') || 
-        (requestUrl.href.includes('youtube.com') && !requestUrl.href.includes('embed'))) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            // Clone the response for caching
-            const responseToCache = response.clone();
-            
-            // Cache the YouTube image
-            caches.open(IMAGE_CACHE_NAME)
-              .then(cache => {
-                try {
-                  cache.put(event.request, responseToCache);
-                } catch (err) {
-                  console.warn('YouTube image cache error:', err);
-                }
-              });
-              
-            return response;
-          })
-          .catch(() => {
-            // If network fails, try cache
-            return caches.match(event.request)
-              .then(cachedResponse => {
-                if (cachedResponse) {
-                  return cachedResponse;
-                }
-                
-                // If no cache hit, return a fallback image
-                return caches.match('/placeholder.svg');
-              });
-          })
-      );
-      return;
-    }
-    
-    // For image requests - network first with cache fallback
-    if (requestUrl.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp)$/) || 
-        requestUrl.pathname.includes('lovable-uploads')) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            // Clone the response
-            const responseToCache = response.clone();
-            
-            caches.open(IMAGE_CACHE_NAME)
-              .then(cache => {
-                try {
-                  cache.put(event.request, responseToCache);
-                } catch (err) {
-                  console.warn('Cache put error:', err);
-                }
-              });
-              
-            return response;
-          })
-          .catch(() => {
-            console.warn(`Failed to fetch image: ${event.request.url}, trying cache`);
-            return caches.match(event.request)
-              .then(cachedResponse => {
-                if (cachedResponse) {
-                  return cachedResponse;
-                }
-                
-                // If no cache hit, return placeholder.svg
-                return caches.match('/placeholder.svg');
-              });
-          })
-      );
-      return;
-    }
-
-    // For everything else - cache first with network fallback
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          if (response) {
-            return response;
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (
+            cacheName !== CACHE_VERSION &&
+            cacheName !== IMAGE_CACHE_VERSION
+          ) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
           }
-          
-          return fetch(event.request)
-            .then((response) => {
-              if (!response || response.status !== 200 || response.type !== 'basic') {
-                return response;
-              }
-              
-              const responseToCache = response.clone();
-              
-              caches.open(CACHE_NAME)
-                .then((cache) => {
-                  try {
-                    cache.put(event.request, responseToCache);
-                  } catch (err) {
-                    console.warn('Cache put error for other resources:', err);
-                  }
-                });
-                
-              return response;
-            })
-            .catch(error => {
-              console.error('Fetch failed:', error);
-              // Return a default offline page or message
-              if (requestUrl.pathname === '/') {
-                return caches.match('/index.html');
-              }
-              return new Response('You are offline and this resource is not cached.', {
-                status: 503,
-                headers: {'Content-Type': 'text/plain'}
-              });
-            });
+        })
+      );
+    })
+  );
+});
+
+// Helper function to determine if a request is an API call
+const isApiRequest = (url) => {
+  return (
+    url.pathname.includes('/api/') || 
+    url.hostname.includes('api.groq.com') ||
+    url.hostname.includes('generativelanguage.googleapis.com') ||
+    url.hostname.includes('youtube.googleapis.com') ||
+    url.hostname.includes('zmjjyoifprnkeitbklpa.supabase.co') ||
+    url.pathname.includes('_supabase')
+  );
+};
+
+// Helper to determine if a request is for an image
+const isImageRequest = (url) => {
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'];
+  return imageExtensions.some(ext => url.pathname.toLowerCase().endsWith(ext));
+};
+
+// Helper to determine if a request is for a static asset (CSS, JS)
+const isStaticAsset = (url) => {
+  return url.pathname.endsWith('.css') || 
+         url.pathname.endsWith('.js') || 
+         url.pathname.includes('assets/');
+};
+
+// Fetch event - network first for API, cache first for assets, stale-while-revalidate for everything else
+self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin) && 
+      !event.request.url.includes('zmjjyoifprnkeitbklpa.supabase.co')) {
+    return;
+  }
+  
+  const url = new URL(event.request.url);
+  
+  // Don't cache API requests
+  if (isApiRequest(url)) {
+    return;
+  }
+  
+  // For navigation requests (HTML documents), use network first with cache fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Cache the updated page
+          const responseToCache = response.clone();
+          caches.open(CACHE_VERSION).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try to serve from cache
+          return caches.match(event.request).then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // If no cached response exists, serve index.html for SPA
+            return caches.match('/index.html');
+          });
         })
     );
-  });
-}
+    return;
+  }
+  
+  // For images, use cache-first strategy
+  if (isImageRequest(url)) {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        // Return cached response if available
+        if (cachedResponse) {
+          // Revalidate in background
+          fetch(event.request).then(networkResponse => {
+            caches.open(IMAGE_CACHE_VERSION).then(cache => {
+              cache.put(event.request, networkResponse);
+            });
+          }).catch(err => console.log('Image revalidation failed:', err));
+          
+          return cachedResponse;
+        }
+        
+        // Otherwise fetch from network
+        return fetch(event.request)
+          .then(response => {
+            // Clone response before using it
+            const responseToCache = response.clone();
+            
+            // Cache the fetched image
+            caches.open(IMAGE_CACHE_VERSION).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+            
+            return response;
+          })
+          .catch(() => {
+            // If both cache and network fail, return fallback image
+            if (url.pathname.includes('lovable-uploads')) {
+              return caches.match('/placeholder.svg');
+            }
+            return caches.match('/placeholder.svg');
+          });
+      })
+    );
+    return;
+  }
+  
+  // For static assets (JS, CSS), use stale-while-revalidate
+  if (isStaticAsset(url)) {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        // Create a promise to update cache in background
+        const fetchPromise = fetch(event.request).then(networkResponse => {
+          // Cache the updated asset
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_VERSION).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          return networkResponse;
+        }).catch(err => {
+          console.warn('Failed to fetch asset:', err);
+          // If network request fails and we have a cached version, return that
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Otherwise propagate the error
+          throw err;
+        });
+        
+        // Return cached response if available, otherwise wait for network
+        return cachedResponse || fetchPromise;
+      })
+    );
+    return;
+  }
+  
+  // Default strategy: stale-while-revalidate
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      const fetchPromise = fetch(event.request)
+        .then(networkResponse => {
+          // Cache the updated response
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_VERSION).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          return networkResponse;
+        })
+        .catch(err => {
+          console.warn('Failed to fetch:', err);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          throw err;
+        });
+      
+      return cachedResponse || fetchPromise;
+    })
+  );
+});
+
+// Handle messages from clients
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

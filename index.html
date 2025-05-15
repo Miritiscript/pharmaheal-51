@@ -3,43 +3,53 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="PharmaHeal - Your AI-powered Pharmacy Assistant" />
     <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="PharmaHeal AI Assistant - Get reliable medication information and pharmacy assistance" />
+    <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/logo-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <title>PharmaHeal - AI Pharmacy Assistant</title>
-    
-    <!-- Simplified CSP to fix resource loading issues -->
+    <meta property="og:title" content="PharmaHeal" />
+    <meta property="og:description" content="Your AI-powered Pharmacy Assistant" />
+    <meta property="og:image" content="/og-image.png" />
+    <title>PharmaHeal</title>
+    <!-- Updated Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co;
+      connect-src 'self' https://*.supabase.co https://api.groq.com https://generativelanguage.googleapis.com https://*.googleapis.com wss://*.supabase.co;
+      img-src 'self' data: blob: https: http:;
       style-src 'self' 'unsafe-inline';
-      img-src 'self' data: blob: https://* http://*;
-      font-src 'self';
-      connect-src 'self' 
-        https://*.supabase.co
-        https://supabase.co
-        https://api.openai.com
-        https://api.groq.com
-        https://generativelanguage.googleapis.com
-        https://api-inference.huggingface.co
-        https://*.lovable.ai
-        https://*.lovable.app
-        https://*.lovable.dev
-        https://img.youtube.com
-        https://i.ytimg.com
-        https://www.googleapis.com
-        wss://*.supabase.co;
-      frame-src 'self' https://www.youtube.com;
-      media-src 'self';
+      script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval';
+      font-src 'self' data:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'self';
+      frame-src 'self' https://youtube.com https://www.youtube.com;
     ">
   </head>
   <body>
     <div id="root"></div>
-    <!-- Required Lovable script tag -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Service worker registration with better error handling -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('Service Worker registered with scope:', registration.scope);
+              
+              // Watch for updates and notify
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('New service worker installing');
+              });
+            })
+            .catch(function(error) {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

@@ -19,7 +19,7 @@ interface RequestBody {
 }
 
 serve(async (req) => {
-  // CORS headers
+  // CORS headers with additional content type headers
   const corsHeaders = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",

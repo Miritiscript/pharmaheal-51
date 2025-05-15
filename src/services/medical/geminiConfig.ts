@@ -71,6 +71,9 @@ DO NOT leave out any sections. DO NOT return an empty response. If the query is 
 Provide detailed medical information for: "{query}"
 `;
 
+// Add the missing exports that are causing the errors
+export const GEMINI_MEDICAL_PROMPT = MEDICAL_PROMPT_TEMPLATE;
+
 // Prompt to check if a query is medically relevant
 export const RELEVANCE_CHECK_PROMPT = `
 Evaluate if this query is medically relevant: "{query}"

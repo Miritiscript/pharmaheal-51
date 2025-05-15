@@ -1,4 +1,4 @@
-import { GEMINI_CONFIG, GEMINI_MEDICAL_PROMPT, GEMINI_RELEVANCE_PROMPT } from './geminiConfig';
+import { GEMINI_CONFIG, MEDICAL_PROMPT_TEMPLATE, RELEVANCE_CHECK_PROMPT } from './geminiConfig';
 import { generateLocalFallbackResponse } from './localFallback';
 
 /**
@@ -182,9 +182,6 @@ export const callGeminiAPI = async (prompt: string): Promise<string> => {
  */
 export const checkMedicalRelevance = async (query: string): Promise<boolean> => {
   try {
-    // Import the relevance check prompt from config
-    const { RELEVANCE_CHECK_PROMPT } = await import('./geminiConfig');
-    
     // Replace the placeholder with the actual query
     const relevanceCheckPrompt = RELEVANCE_CHECK_PROMPT.replace("{query}", query);
     
@@ -334,14 +331,14 @@ export const checkMedicalRelevance = async (query: string): Promise<boolean> => 
   }
 };
 
+// Import the Groq client function to fix the missing reference
+import { generateGroqContent } from '../groq/groqClient';
+
 /**
  * Generate content using Gemini AI
  */
 export const generateGeminiContent = async (query: string): Promise<{ text: string, error?: string, source?: string }> => {
   try {
-    // Import the medical prompt template from config
-    const { MEDICAL_PROMPT_TEMPLATE } = await import('./geminiConfig');
-    
     // Replace the placeholder with the actual query
     const medicalPrompt = MEDICAL_PROMPT_TEMPLATE.replace("{query}", query);
     

@@ -3,53 +3,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PharmaHeal - Your AI-powered Pharmacy Assistant" />
     <meta name="theme-color" content="#ffffff" />
-    <link rel="icon" href="/favicon.ico" />
+    <meta name="description" content="PharmaHeal - Your trusted medical information platform with AI assistance and educational content" />
+    <meta property="og:title" content="PharmaHeal" />
+    <meta property="og:description" content="Medical information platform with AI assistance and educational videos" />
+    <meta property="og:image" content="/og-image.png" />
     <link rel="apple-touch-icon" href="/logo-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta property="og:title" content="PharmaHeal" />
-    <meta property="og:description" content="Your AI-powered Pharmacy Assistant" />
-    <meta property="og:image" content="/og-image.png" />
     <title>PharmaHeal</title>
-    <!-- Updated Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      connect-src 'self' https://*.supabase.co https://api.groq.com https://generativelanguage.googleapis.com https://*.googleapis.com wss://*.supabase.co;
-      img-src 'self' data: blob: https: http:;
-      style-src 'self' 'unsafe-inline';
-      script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval';
-      font-src 'self' data:;
-      object-src 'none';
-      base-uri 'self';
-      form-action 'self';
-      frame-ancestors 'self';
-      frame-src 'self' https://youtube.com https://www.youtube.com;
-    ">
+    <!-- Required Lovable script tag -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Service worker registration with better error handling -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(function(registration) {
-              console.log('Service Worker registered with scope:', registration.scope);
-              
-              // Watch for updates and notify
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                console.log('New service worker installing');
-              });
-            })
-            .catch(function(error) {
-              console.error('Service Worker registration failed:', error);
-            });
-        });
-      }
-    </script>
   </body>
 </html>

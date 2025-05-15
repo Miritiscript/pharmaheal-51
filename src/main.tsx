@@ -39,6 +39,11 @@ rootElement.style.height = "100vh";
 rootElement.style.margin = "0";
 rootElement.style.padding = "0";
 
+// Initialize Lovable-specific features if available
+if (window.lovable) {
+  console.log('Lovable features initialized');
+}
+
 // Use createRoot API to mount the app
 createRoot(rootElement).render(
   <React.StrictMode>

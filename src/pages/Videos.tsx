@@ -4,27 +4,17 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import VideoHub from '@/components/videos/VideoHub';
 import { useTheme } from '@/components/theme/ThemeProvider';
-import { toast } from 'sonner';
 
 const Videos: React.FC = () => {
   const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   
-  // Add an effect to handle loading and error states
+  // Add an effect to handle loading states without toast messages
   useEffect(() => {
-    // Show a loading toast
-    const loadingToast = toast.loading("Loading video content...");
-    
     // Simulate a loading delay to ensure images have time to preload
     const timer = setTimeout(() => {
       setIsLoading(false);
-      toast.dismiss(loadingToast);
-      
-      // Check if navigator is online
-      if (!navigator.onLine) {
-        toast.warning("You appear to be offline. Some content may not load properly.");
-      }
-    }, 1500);
+    }, 1000);
     
     // Handle global errors for YouTube API calls
     const handleError = (event: ErrorEvent) => {
@@ -43,7 +33,6 @@ const Videos: React.FC = () => {
     return () => {
       window.removeEventListener('error', handleError);
       clearTimeout(timer);
-      toast.dismiss(loadingToast);
     };
   }, []);
   

@@ -1,24 +1,20 @@
 
 // Define common fallback images - stored locally to avoid Unsplash hotlink restrictions
 export const FALLBACK_IMAGES = [
-  "/logo-icon.png",
-  "/logo-full.png",
   "/favicon.ico",
   "/placeholder.svg"
 ];
 
 // Local uploaded images as additional fallbacks
 export const LOCAL_FALLBACK_IMAGES = [
-  "/logo-icon.png",
-  "/logo-full.png",
   "/favicon.ico",
   "/placeholder.svg"
 ];
 
 // YouTube specific fallbacks
 export const YOUTUBE_FALLBACK_IMAGES = [
-  "/logo-icon.png",
-  "/logo-full.png"
+  "/favicon.ico",
+  "/placeholder.svg"
 ];
 
 // Function to safely load images with fallbacks

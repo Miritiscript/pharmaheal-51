@@ -1,8 +1,8 @@
 
-// Cache names
-const CACHE_NAME = 'pharmaheal-v11';
-const DATA_CACHE_NAME = 'pharmaheal-data-v11';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v11';
+// Cache names - update version to refresh caches
+const CACHE_NAME = 'pharmaheal-v12';
+const DATA_CACHE_NAME = 'pharmaheal-data-v12';
+const IMAGE_CACHE_NAME = 'pharmaheal-images-v12';
 
 // Files to cache
 const urlsToCache = [
@@ -11,14 +11,16 @@ const urlsToCache = [
   '/manifest.json',
   '/favicon.ico',
   '/logo-icon.png',
-  '/logo-full.png'
+  '/logo-full.png',
+  '/placeholder.svg'
 ];
 
 // Local fallback images to pre-cache
 const fallbackImages = [
   '/logo-icon.png',
   '/logo-full.png',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/placeholder.svg'
 ];
 
 // Check if we're in development mode
@@ -118,6 +120,32 @@ if (isDev) {
       return;
     }
     
+    // Handle JS and CSS files - network first with cache fallback
+    if (requestUrl.pathname.match(/\.(js|css)$/)) {
+      event.respondWith(
+        fetch(event.request)
+          .then(response => {
+            // Clone the response
+            const responseToCache = response.clone();
+            
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                try {
+                  cache.put(event.request, responseToCache);
+                } catch (err) {
+                  console.warn('Cache put error for JS/CSS:', err);
+                }
+              });
+              
+            return response;
+          })
+          .catch(() => {
+            return caches.match(event.request);
+          })
+      );
+      return;
+    }
+    
     // For YouTube API requests - network only, don't cache
     if (requestUrl.href.includes('googleapis.com/youtube')) {
       event.respondWith(
@@ -148,9 +176,7 @@ if (isDev) {
             caches.open(IMAGE_CACHE_NAME)
               .then(cache => {
                 try {
-                  cache.put(event.request, responseToCache).catch(err => {
-                    console.warn('YouTube image cache error:', err);
-                  });
+                  cache.put(event.request, responseToCache);
                 } catch (err) {
                   console.warn('YouTube image cache error:', err);
                 }
@@ -167,7 +193,7 @@ if (isDev) {
                 }
                 
                 // If no cache hit, return a fallback image
-                return caches.match('/logo-icon.png');
+                return caches.match('/placeholder.svg');
               });
           })
       );
@@ -186,11 +212,9 @@ if (isDev) {
             caches.open(IMAGE_CACHE_NAME)
               .then(cache => {
                 try {
-                  cache.put(event.request, responseToCache).catch(err => {
-                    console.warn('Cache put error:', err);
-                  });
+                  cache.put(event.request, responseToCache);
                 } catch (err) {
-                  console.warn('Cache error:', err);
+                  console.warn('Cache put error:', err);
                 }
               });
               
@@ -203,8 +227,8 @@ if (isDev) {
                   return cachedResponse;
                 }
                 
-                // If no cache hit, return logo-icon.png
-                return caches.match('/logo-icon.png');
+                // If no cache hit, return placeholder.svg
+                return caches.match('/placeholder.svg');
               });
           })
       );
@@ -230,11 +254,9 @@ if (isDev) {
               caches.open(CACHE_NAME)
                 .then((cache) => {
                   try {
-                    cache.put(event.request, responseToCache).catch(err => {
-                      console.warn('Cache put error for other resources:', err);
-                    });
+                    cache.put(event.request, responseToCache);
                   } catch (err) {
-                    console.warn('Cache error for other resources:', err);
+                    console.warn('Cache put error for other resources:', err);
                   }
                 });
                 

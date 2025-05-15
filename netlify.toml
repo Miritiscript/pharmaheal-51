@@ -12,27 +12,44 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://* http://*; font-src 'self'; connect-src 'self' https://*.supabase.co https://supabase.co https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://*.lovable.ai https://*.lovable.app https://*.lovable.dev wss://*.supabase.co; frame-src 'self' https://www.youtube.com; media-src 'self';"
 
-# Add cache control headers for better image caching
+# Add cache control headers for better image caching and proper MIME types
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Content-Type = "text/css"
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=31536000"
+
 [[headers]]
   for = "/*.png"
   [headers.values]
+    Content-Type = "image/png"
     Cache-Control = "public, max-age=31536000"
 
 [[headers]]
   for = "/*.jpg"
   [headers.values]
+    Content-Type = "image/jpeg"
     Cache-Control = "public, max-age=31536000"
 
 [[headers]]
   for = "/*.svg"
   [headers.values]
+    Content-Type = "image/svg+xml"
     Cache-Control = "public, max-age=31536000"
 
 [[headers]]
   for = "/*.ico"
   [headers.values]
+    Content-Type = "image/x-icon"
     Cache-Control = "public, max-age=31536000"
 
+# Handle redirects properly
 [[redirects]]
   from = "/*"
   to = "/index.html"

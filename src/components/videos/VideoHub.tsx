@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
@@ -47,7 +46,6 @@ const VideoHub: React.FC = () => {
         if (fetchedCategories && fetchedCategories.length > 0) {
           setCategories(fetchedCategories);
           setFilteredCategories(fetchedCategories);
-          // Toast is now handled in the service
         } else {
           // If no videos were returned, fallback to mock data
           console.warn("No videos returned from API, using mock data");
@@ -59,7 +57,6 @@ const VideoHub: React.FC = () => {
         // Fallback to mock data already handled in service
         setCategories(mockCategories);
         setFilteredCategories(mockCategories);
-        // Toast is now handled in the service
       } finally {
         setIsLoading(false);
       }

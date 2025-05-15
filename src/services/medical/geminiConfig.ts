@@ -1,6 +1,6 @@
 
 export const GEMINI_CONFIG = {
-  API_KEY: "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY",
+  API_KEY: "AIzaSyCJz7f2etksZsZLK2vsiUmCxIcAb5fHDp4",
   API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
   DEFAULT_PARAMS: {
     temperature: 0.6,  // Increased temperature slightly for more diverse responses

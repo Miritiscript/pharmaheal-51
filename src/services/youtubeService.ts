@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { VideoCategory, mockCategories } from '@/data/mockVideos';
 
 // YouTube API Key
-const YOUTUBE_API_KEY = 'AIzaSyBW4M1YVlcC6XUC_yvoOR5CUvlPvvyVlrc';
+const YOUTUBE_API_KEY = 'AIzaSyAKQtBBV653G3sWaR7OrRStQmSGiuf8lLw';
 
 // Keep track of toast IDs to prevent duplicates
 const toastIds = {

@@ -1,9 +1,23 @@
-
 // This file would be in src/services/youtubeService.ts
+import { toast } from 'sonner';
 import { VideoCategory, mockCategories } from '@/data/mockVideos';
 
-// YouTube API Key 
+// YouTube API Key
 const YOUTUBE_API_KEY = 'AIzaSyBW4M1YVlcC6XUC_yvoOR5CUvlPvvyVlrc';
+
+// Keep track of toast IDs to prevent duplicates
+const toastIds = {
+  videoSuccess: 'video-load-success',
+  videoError: 'video-load-error',
+  quotaExceeded: 'quota-exceeded'
+};
+
+// Check if a toast with the given ID is already active
+const isToastActive = (id: string): boolean => {
+  // This is a simple implementation since sonner doesn't have a direct isActive method
+  // We'll use a wrapper around toast to manage this
+  return document.getElementById(`toast-${id}`) !== null;
+};
 
 /**
  * Validates if a string is a valid YouTube video ID
@@ -23,49 +37,32 @@ export const validateVideoId = (videoId: string): boolean => {
 };
 
 /**
- * Makes a real API call to YouTube Data API with CORS handling
+ * Makes a real API call to YouTube Data API
  */
 const fetchFromYouTubeAPI = async (query: string, maxResults: number = 12) => {
   console.log(`Fetching from YouTube API for: ${query}`);
   
-  // Try to use proxy first for production environment
-  const useProxy = !window.location.hostname.includes('localhost') && 
-                   !window.location.hostname.includes('lovable.dev');
+  const endpoint = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`;
   
-  // For production, use a proxy to avoid CORS issues
-  const endpoint = useProxy 
-    ? `/youtube-proxy/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`
-    : `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`;
+  const response = await fetch(endpoint);
   
-  try {
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("YouTube API error:", errorData);
     
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: { message: `HTTP error ${response.status}` } }));
-      console.error("YouTube API error:", errorData);
-      
-      if (response.status === 403) {
-        throw new Error("The request cannot be completed because you have exceeded your quota.");
-      }
-      
-      throw new Error(`YouTube API error: ${errorData.error?.message || response.statusText}`);
+    if (response.status === 403) {
+      throw new Error("The request cannot be completed because you have exceeded your quota.");
     }
     
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error(`Failed to fetch YouTube data: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
+    throw new Error(`YouTube API error: ${errorData.error?.message || response.statusText}`);
   }
+  
+  const data = await response.json();
+  return data;
 };
 
 /**
- * Fetches YouTube videos for a specific category with improved error handling
+ * Fetches YouTube videos for a specific category
  */
 export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Promise<VideoCategory> => {
   try {
@@ -102,7 +99,17 @@ export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Pr
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`YouTube API search error:`, error);
-    console.warn(`Falling back to mock data for '${category.title}' due to: ${errorMessage}`);
+    console.error(`Error fetching YouTube videos for '${category.title}':`, error);
+    
+    // Check if the error is a quota exceeded error
+    if (errorMessage.includes('quota')) {
+      if (!isToastActive(toastIds.quotaExceeded)) {
+        toast.error("YouTube API quota exceeded. Using cached videos instead.", {
+          id: toastIds.quotaExceeded,
+          duration: 5000
+        });
+      }
+    }
     
     // Find the corresponding category in mock data
     const mockCategory = mockCategories.find(c => c.id === category.id || c.title === category.title);
@@ -119,7 +126,6 @@ export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Pr
 
 /**
  * Fetches video categories from the YouTube API or falls back to mock data
- * Silently handles errors and always returns usable data
  */
 export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   try {
@@ -144,16 +150,39 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
     if (totalVideos > 0) {
       // We got some videos from the API
       console.log("Successfully loaded categories:", updatedCategories);
+      
+      if (!isToastActive(toastIds.videoSuccess)) {
+        toast.success("Videos loaded successfully", {
+          id: toastIds.videoSuccess,
+          duration: 3000
+        });
+      }
+      
       return updatedCategories;
     } else {
       // No videos were returned from any category
       console.warn("No videos found with YouTube API, using mock data");
+      
+      if (!isToastActive(toastIds.videoError)) {
+        toast.error("Couldn't load videos, using cached data instead", {
+          id: toastIds.videoError,
+          duration: 5000
+        });
+      }
+      
       return mockCategories;
     }
   } catch (error) {
     console.error("Error fetching videos:", error);
     
-    // Return mock data as fallback without showing error to user
+    if (!isToastActive(toastIds.videoError)) {
+      toast.error("Couldn't load videos, using cached data instead", {
+        id: toastIds.videoError,
+        duration: 5000
+      });
+    }
+    
+    // Return mock data as fallback
     return mockCategories;
   }
 };

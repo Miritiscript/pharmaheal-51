@@ -1,35 +1,21 @@
 
-import { GeminiConfig } from "./types";
-
-// TypeScript interface for Gemini configuration
-export const GEMINI_CONFIG: GeminiConfig = {
-  API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
-  // Use environment variable with fallback to hardcoded key
-  API_KEY: import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCZYu9EiurIQVf13J3QvpHCgIoVJ2XOG-U",
+export const GEMINI_CONFIG = {
+  API_KEY: "AIzaSyA9rB0nj_ogIj3t_wh8IWlLstVGKqwnbuY",
+  API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
   DEFAULT_PARAMS: {
-    temperature: 0.7,
-    topP: 0.8,
-    topK: 40,
-    maxOutputTokens: 2048,
+    temperature: 0.4,
+    topK: 32,
+    topP: 0.95,
+    maxOutputTokens: 1024,
   },
-  MAX_RETRIES: 3, // Increased retries for better reliability
-  RETRY_DELAY: 1000,
-  TIMEOUT_MS: 20000 // 20 second timeout
-};
+  MAX_RETRIES: 2,
+  RETRY_DELAY: 1000 // ms
+} as const;
 
-// Enhanced logging on load (without exposing API key)
-console.log("Gemini config loaded:", {
-  API_URL: GEMINI_CONFIG.API_URL,
-  API_KEY_LENGTH: GEMINI_CONFIG.API_KEY?.length || 0,
-  API_KEY_PRESENT: !!GEMINI_CONFIG.API_KEY,
-  MAX_RETRIES: GEMINI_CONFIG.MAX_RETRIES,
-  TIMEOUT_MS: GEMINI_CONFIG.TIMEOUT_MS
-});
-
-// Medical prompt template for consistent responses
 export const MEDICAL_PROMPT_TEMPLATE = `
-You are PharmaGPT, a highly specialized medical AI assistant. Your job is to provide clear, structured, and evidence-based information about the query. 
-Always break the response into the following sections:
+As a medical AI assistant, provide comprehensive information about: "{query}"
+
+Format your response with these sections using bullet points:
 
 1. DISEASE DESCRIPTION
 • Key details about the condition/treatment
@@ -63,40 +49,30 @@ Always break the response into the following sections:
 
 If no food-based treatments exist, state: "• No scientifically-backed food-based treatments found for this condition."
 
-Use bullet points (•) for all information. Each section should provide 3-6 relevant points.
-Include a medical disclaimer at the end.
+Use bullet points (•) for all information. Each section should provide 3-5 relevant points.
+Include a medical disclaimer.`;
 
-DO NOT leave out any sections. DO NOT return an empty response. If the query is unclear, interpret it as best as possible and provide general medical information related to the topic.
-
-Provide detailed medical information for: "{query}"
-`;
-
-// Add the missing exports that are causing the errors
-export const GEMINI_MEDICAL_PROMPT = MEDICAL_PROMPT_TEMPLATE;
-
-// Prompt to check if a query is medically relevant
+// Simplified JSON-based relevance check prompt that produces cleaner JSON
 export const RELEVANCE_CHECK_PROMPT = `
-Evaluate if this query is medically relevant: "{query}"
+You are a medical query validator.
 
-Return a JSON response with a single boolean field "isRelevant" with value true or false.
+Is the query "{query}" related to human health, medical conditions, medications, treatments, or wellness?
 
-Example format:
-{"isRelevant": true}
+Return ONLY a JSON object with this exact format:
+{
+  "isRelevant": true/false,
+  "reason": "brief explanation"
+}
 
-A query is medically relevant if it relates to:
-- Health conditions
-- Diseases or symptoms
-- Medications or treatments
-- Medical procedures
-- Wellness topics
-- Diet related to health
-- Exercise for health benefits
+Example valid response for "aspirin dosage":
+{
+  "isRelevant": true,
+  "reason": "Query is about medication dosage"
+}
 
-A query is NOT medically relevant if it is about:
-- Non-medical topics (e.g., "what is the capital of France")
-- General information with no health relevance
-- Technical support unrelated to health
-- Coding or programming
-- Random strings or nonsensical input
-
-ONLY return the JSON response, nothing else. No explanation, no justification, just the JSON.`;
+Example valid response for "how to bake cookies":
+{
+  "isRelevant": false,
+  "reason": "Query is about cooking, not medical"
+}
+`;

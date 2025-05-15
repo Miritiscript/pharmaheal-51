@@ -3,21 +3,57 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="PharmaHeal - Your trusted medical information platform with AI assistance and educational content" />
-    <meta property="og:title" content="PharmaHeal" />
-    <meta property="og:description" content="Medical information platform with AI assistance and educational videos" />
+    <title>PharmaHeal - Medication and Health Education</title>
+    <meta name="description" content="Your comprehensive pharmacy and health education app" />
+    <meta name="author" content="PharmaHeal" />
     <meta property="og:image" content="/og-image.png" />
-    <link rel="apple-touch-icon" href="/logo-icon.png" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6" />
     <link rel="manifest" href="/manifest.json" />
-    <title>PharmaHeal</title>
-    <!-- Required Lovable script tag -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <link rel="apple-touch-icon" href="/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png" />
+    <link rel="icon" type="image/png" href="/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PharmaHeal" />
+    
+    <!-- Updated CSP to allow YouTube iframe and images -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com https://www.googleapis.com; img-src 'self' data: https://*.ytimg.com https://img.youtube.com https://*.unsplash.com /lovable-uploads/* blob:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com;">
   </head>
+
   <body>
     <div id="root"></div>
+    <!-- IMPORTANT: GPT Engineer script tag moved before the main script -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Modified Service Worker Registration to check for development mode -->
+    <script>
+      // Only register service worker in production mode
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      } else {
+        console.log('Service Worker not registered - development mode detected');
+        // Unregister any existing service workers in development mode
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let registration of registrations) {
+              registration.unregister();
+              console.log('Service Worker unregistered for development');
+            }
+          });
+        }
+      }
+    </script>
   </body>
 </html>

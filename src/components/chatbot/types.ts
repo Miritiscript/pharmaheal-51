@@ -6,10 +6,7 @@ export interface Message {
   content: string;
   isUser: boolean;
   timestamp: Date;
-  pharmacyData?: any;
-  fallbackUsed?: boolean;
-  error?: boolean;
-  source?: string; // Added source property to track which system provided the response
+  pharmacyData?: GeminiResponse;
 }
 
 export interface ChatHistory {

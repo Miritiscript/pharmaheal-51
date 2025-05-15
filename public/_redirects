@@ -1,16 +1,2 @@
 
-# Redirect all routes to index.html for SPA
 /*    /index.html   200
-
-# Proper MIME types for assets
-/*.js    /index.html   200!   Content-Type=application/javascript
-/*.css   /index.html   200!   Content-Type=text/css
-/*.svg   /index.html   200!   Content-Type=image/svg+xml
-/*.png   /index.html   200!   Content-Type=image/png
-/*.jpg   /index.html   200!   Content-Type=image/jpeg
-/*.jpeg  /index.html   200!   Content-Type=image/jpeg
-/*.webp  /index.html   200!   Content-Type=image/webp
-/*.woff  /index.html   200!   Content-Type=font/woff
-/*.woff2 /index.html   200!   Content-Type=font/woff2
-/*.ttf   /index.html   200!   Content-Type=font/ttf
-/*.eot   /index.html   200!   Content-Type=application/vnd.ms-fontobject

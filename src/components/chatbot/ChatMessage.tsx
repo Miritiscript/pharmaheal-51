@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bot, User, AlertTriangle } from 'lucide-react';
+import { Bot, User } from 'lucide-react';
 import PharmacyResponse from './PharmacyResponse';
 import { Message } from './types';
 import { useTheme } from '@/components/theme/ThemeProvider';
@@ -13,60 +13,34 @@ interface ChatMessageProps {
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLoading = false }) => {
   const { theme } = useTheme();
   
-  // Debug output to help trace rendering issues
-  if (message.pharmacyData) {
-    console.log("Rendering message with pharmacy data:", {
-      messageId: message.id,
-      hasText: !!message.pharmacyData.text,
-      hasCategories: !!message.pharmacyData.categories,
-      timestamp: message.timestamp
-    });
-  }
-  
   return (
     <div
       className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-      data-message-id={message.id}
     >
       <div
         className={`max-w-[90%] ${
           message.isUser
             ? 'bg-primary text-primary-foreground rounded-t-xl rounded-bl-xl'
-            : message.error 
-              ? 'bg-red-50 border border-red-300 dark:bg-red-900/20 dark:border-red-800 text-red-800 dark:text-red-200 rounded-t-xl rounded-br-xl'
-              : theme === 'dark' 
-                ? 'bg-slate-800 border border-slate-700 text-slate-100 rounded-t-xl rounded-br-xl' 
-                : 'glass rounded-t-xl rounded-br-xl'
+            : theme === 'dark' 
+              ? 'bg-slate-800 border border-slate-700 text-slate-100 rounded-t-xl rounded-br-xl' 
+              : 'glass rounded-t-xl rounded-br-xl'
         } p-3 shadow-sm`}
       >
         <div className="flex items-start gap-2">
-          {!message.isUser && !message.error && (
+          {!message.isUser && (
             <Bot className="w-5 h-5 mt-1 text-primary shrink-0" />
-          )}
-          {!message.isUser && message.error && (
-            <AlertTriangle className="w-5 h-5 mt-1 text-red-500 shrink-0" />
           )}
           {message.isUser && (
             <User className="w-5 h-5 mt-1 text-white shrink-0" />
           )}
           <div className="w-full">
-            {message.pharmacyData && !message.error ? (
+            {message.pharmacyData ? (
               <PharmacyResponse response={message.pharmacyData} />
             ) : (
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
             )}
             <span className="text-xs opacity-70 mt-1 block text-right">
               {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {message.fallbackUsed && (
-                <span className="ml-2 text-amber-500 font-medium">
-                  (fallback)
-                </span>
-              )}
-              {message.error && (
-                <span className="ml-2 text-red-500 font-medium">
-                  (error)
-                </span>
-              )}
             </span>
           </div>
         </div>

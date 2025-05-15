@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, Play, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Video } from '@/data/mockVideos';
-import { useTheme } from '@/components/theme/ThemeProvider';
+import { useTheme } from 'next-themes';
 import { validateVideoId } from '@/services/youtubeService';
 import { 
   LOCAL_FALLBACK_IMAGES, 
@@ -96,9 +95,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
     );
   }
 
-  // Ensure valid YouTube ID for embedding
-  const embedVideoId = validateVideoId(video.videoId) ? video.videoId : '';
-
   return (
     <div className="mb-8 animate-fade-in">
       <Button 
@@ -114,30 +110,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
       <div className={`glass-card overflow-hidden transition-all duration-300 ${
         theme === 'dark' ? 'bg-gray-900/80 border-gray-800/40' : ''
       }`}>
-        {embedVideoId ? (
-          <div className="relative pb-[56.25%] h-0">
-            <iframe
-              className="absolute top-0 left-0 w-full h-full"
-              src={`https://www.youtube.com/embed/${embedVideoId}`}
-              title={video.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            ></iframe>
-          </div>
-        ) : (
-          <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <img 
-              src={getBestThumbnailUrl(video)}
-              alt={`Thumbnail for ${video.title}`}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <p className="text-white text-center p-4">Video preview not available</p>
-            </div>
-          </div>
-        )}
+        <div className="relative pb-[56.25%] h-0">
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${video.videoId}`}
+            title={video.title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          ></iframe>
+        </div>
         <div className="p-4 lg:p-6">
           <h2 className={`text-xl font-semibold mb-2 ${
             theme === 'dark' ? 'text-white' : ''
@@ -148,14 +131,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, onClose, relatedVideos
           </p>
           <div className="mt-4 text-sm">
             <p>{video.description || "This video provides educational information about health topics. Watch the full video on YouTube for complete information."}</p>
-            {embedVideoId && (
-              <Button 
-                className="flex items-center mt-4 bg-pharma-600 hover:bg-pharma-700 text-white transition-colors duration-300"
-                onClick={() => window.open(`https://youtube.com/watch?v=${video.videoId}`, '_blank')}
-              >
-                Watch Full Video <ExternalLink className="ml-2 w-4 h-4" />
-              </Button>
-            )}
+            <Button 
+              className="flex items-center mt-4 bg-pharma-600 hover:bg-pharma-700 text-white transition-colors duration-300"
+              onClick={() => window.open(`https://youtube.com/watch?v=${video.videoId}`, '_blank')}
+            >
+              Watch Full Video <ExternalLink className="ml-2 w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>

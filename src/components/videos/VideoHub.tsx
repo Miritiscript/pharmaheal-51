@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
@@ -6,6 +7,7 @@ import VideoPlayer from './VideoPlayer';
 import { Video, VideoCategory, mockCategories } from '@/data/mockVideos';
 import { fetchVideoCategories } from '@/services/youtubeService';
 import VideoSkeleton from './VideoSkeleton';
+import { toast } from 'sonner';
 import SearchBar from '../search/SearchBar';
 import { Button } from '../ui/Button';
 import { Filter } from 'lucide-react';
@@ -45,6 +47,7 @@ const VideoHub: React.FC = () => {
         if (fetchedCategories && fetchedCategories.length > 0) {
           setCategories(fetchedCategories);
           setFilteredCategories(fetchedCategories);
+          // Toast is now handled in the service
         } else {
           // If no videos were returned, fallback to mock data
           console.warn("No videos returned from API, using mock data");
@@ -56,6 +59,7 @@ const VideoHub: React.FC = () => {
         // Fallback to mock data already handled in service
         setCategories(mockCategories);
         setFilteredCategories(mockCategories);
+        // Toast is now handled in the service
       } finally {
         setIsLoading(false);
       }

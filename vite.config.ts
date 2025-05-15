@@ -12,10 +12,6 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: true,
     },
-    // Add cache control for development server
-    headers: {
-      'Cache-Control': 'no-store, max-age=0'
-    }
   },
   plugins: [
     react(),
@@ -31,20 +27,17 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },
-  // Add build-specific options
   build: {
     outDir: "dist",
     emptyOutDir: true,
     sourcemap: mode !== "production",
-    // Disable cache for assets
-    assetsInlineLimit: 0,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['next-themes', 'lucide-react'],
         },
-        // Ensure file extensions are preserved and use content hash for cache busting
+        // Ensure file extensions are preserved
         entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
         assetFileNames: 'assets/[name].[hash].[ext]'
@@ -58,6 +51,4 @@ export default defineConfig(({ mode }) => ({
     'import.meta.env.DEV': mode === 'development',
     'import.meta.env.PROD': mode === 'production',
   },
-  // Add base URL for production builds on Netlify
-  base: '/',
 }));

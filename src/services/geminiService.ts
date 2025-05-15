@@ -1,3 +1,4 @@
+
 import { generateGeminiContent, checkMedicalRelevance } from './medical/geminiClient';
 import { isValidMedicalQuery, expandMedicalQuery, standardizeMedicalTerm } from './medical/queryValidator';
 import { diseaseAliasesMap } from './medical/diseaseAliases';
@@ -23,7 +24,6 @@ export interface GeminiResponse {
   };
   isRelevant?: boolean;
   error?: string;
-  source?: string; // Track which system provided the response
 }
 
 // Medical abbreviation synonyms for preprocessing
@@ -37,31 +37,8 @@ const medicalSynonyms: Record<string, string> = {
   "prn": "as needed",
   "otc": "over the counter",
   "gi": "gastrointestinal",
-  "cv": "cardiovascular",
-  // Added more common medical abbreviations
-  "afib": "atrial fibrillation",
-  "ca": "cancer",
-  "cad": "coronary artery disease",
-  "chf": "congestive heart failure",
-  "copd": "chronic obstructive pulmonary disease",
-  "dvt": "deep vein thrombosis",
-  "mi": "myocardial infarction",
-  "ra": "rheumatoid arthritis",
-  "uti": "urinary tract infection",
-  "tb": "tuberculosis"
+  "cv": "cardiovascular"
 };
-
-// Common disease names to ensure they're recognized
-const commonDiseases = [
-  "leukemia", "lymphoma", "melanoma", "alzheimer", "parkinson", 
-  "crohn", "lupus", "fibromyalgia", "multiple sclerosis", "ms",
-  "epilepsy", "schizophrenia", "bipolar", "hepatitis", "cirrhosis",
-  // Added more diseases to ensure they're recognized
-  "cancer", "diabetes", "hypertension", "asthma", "arthritis",
-  "pneumonia", "bronchitis", "influenza", "aids", "hiv",
-  "sars", "covid", "coronavirus", "malaria", "tuberculosis",
-  "depression", "anxiety", "adhd", "autism", "dementia"
-];
 
 // Function to normalize query with medical synonyms
 function normalizeQuery(query: string): string {
@@ -79,7 +56,6 @@ const interactionTracker: Record<string, { count: number; lastRejectedAt?: Date 
 
 /**
  * Processes a pharmacy-related query and returns AI-generated information
- * Now with Groq fallback for improved reliability
  */
 export const generatePharmacyResponse = async (query: string): Promise<GeminiResponse> => {
   try {
@@ -92,60 +68,29 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const normalizedQuery = normalizeQuery(query);
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
-    // Fast path for known medical queries - bypass all checks
-    const containsCommonDisease = commonDiseases.some(disease => 
-      normalizedQuery.includes(disease)
-    );
-    
-    if (containsCommonDisease) {
-      console.log("Query contains a common disease name, skipping relevance checks");
-    }
-    
-    // Check for disease aliases in the query - another fast path
-    const containsDiseaseName = Object.keys(diseaseAliasesMap).some(alias => 
-      normalizedQuery.includes(alias.toLowerCase())
-    );
-    
-    if (containsDiseaseName) {
-      console.log("Query contains a disease alias, skipping relevance checks");
-    }
-    
-    // Use our local validator first as a quick check
+    // Use our local validator first as a safety check
     const localValidation = isValidMedicalQuery(normalizedQuery);
     console.log("Local relevance validation result:", localValidation);
     
-    // Combine initial checks
-    let isRelevant = localValidation || containsCommonDisease || containsDiseaseName;
+    let isRelevant = localValidation; // Default to local validation result
     
-    // Check for repeat attempts - users may be frustrated by blocks
+    // Then verify with Gemini API for more accurate checking
+    try {
+      isRelevant = await checkMedicalRelevance(normalizedQuery);
+      console.log("Gemini relevance check result:", isRelevant);
+    } catch (error) {
+      // If Gemini API fails, fall back to local validation result
+      console.warn("Gemini relevance check failed, using local validation:", error);
+    }
+    
+    // Allow through if:
+    // 1. The query is deemed relevant
+    // 2. OR the user has tried multiple times with the same query
     const interaction = interactionTracker[normalizedQuery];
-    const allowDueToMultipleAttempts = interaction && interaction.count > 1;
+    const allowDueToMultipleAttempts = interaction && interaction.count > 2;
     
-    if (allowDueToMultipleAttempts) {
-      console.log("User has tried this query multiple times, allowing through");
-      isRelevant = true;
-    }
-    
-    // Only if the query hasn't been determined to be relevant, 
-    // check with Gemini API as a more sophisticated check
-    if (!isRelevant) {
-      try {
-        const apiRelevanceCheck = await checkMedicalRelevance(normalizedQuery);
-        console.log("Gemini relevance check result:", apiRelevanceCheck);
-        isRelevant = apiRelevanceCheck; // Use the API result
-      } catch (error) {
-        console.warn("Gemini relevance check failed, defaulting to accept:", error);
-        // If the check fails, assume relevant to avoid blocking valid queries
-        isRelevant = true;
-      }
-    }
-    
-    // Make final decision on whether to process the query
-    // ONLY reject if ALL checks have determined it's not medical
-    // AND this is the first or second attempt
-    if (!isRelevant && !allowDueToMultipleAttempts && 
-        !localValidation && !containsDiseaseName && !containsCommonDisease) {
-      console.log("All checks determined query is non-medical:", normalizedQuery);
+    if (!isRelevant && !allowDueToMultipleAttempts && !localValidation) {
+      console.log("Query rejected as non-medical:", normalizedQuery);
       throw new Error(
         "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
       );
@@ -168,77 +113,31 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const expandedQuery = expandMedicalQuery(enhancedQuery);
     console.log(`Processing medical query: ${expandedQuery}`);
     
-    // Try Gemini with fallback to Groq
-    try {
-      console.log("Attempting to get response from primary Gemini API...");
-      const response = await generateGeminiContent(expandedQuery);
-      
-      console.log("Received AI response of length:", response.text.length);
-      
-      // Build the initial response
-      const initialResponse: GeminiResponse = {
-        text: response.text,
-        query: query,
-        enhancedQuery: enhancedQuery,
-        timestamp: new Date(),
-        isRelevant: isRelevant,
-        source: response.source || "unknown",
-        // Extract key medical terms that matched in the query
-        medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
-          normalizedQuery.includes(term.toLowerCase())
-        ).map(term => ({
-          colloquial: term,
-          standard: diseaseAliasesMap[term]
-        }))
-      };
-      
-      // Enhance the response with parsed categories
-      const enhancedResponse = enhanceGeminiResponse(initialResponse);
-      console.log("Enhanced response with categories:", Object.keys(enhancedResponse.categories || {}));
-      
-      // Maintain source information through the enhancement
-      if (!enhancedResponse.source && response.source) {
-        enhancedResponse.source = response.source;
-      }
-      
-      return enhancedResponse;
-    } catch (error) {
-      console.error("Gemini API failed, falling back to Groq:", error);
-      
-      // Attempt fallback to Groq
-      try {
-        const response = await import('../services/groq/groqClient').then(module => 
-          module.generateGroqContent(expandedQuery)
-        );
-        
-        console.log("Successfully received Groq fallback response of length:", response.text.length);
-        
-        // Build the initial response with fallback flag
-        const initialResponse: GeminiResponse = {
-          text: response.text,
-          query: query,
-          enhancedQuery: enhancedQuery,
-          timestamp: new Date(),
-          isRelevant: true,
-          source: response.source || "groq",
-          medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
-            normalizedQuery.includes(term.toLowerCase())
-          ).map(term => ({
-            colloquial: term,
-            standard: diseaseAliasesMap[term]
-          }))
-        };
-        
-        // Enhance the fallback response
-        const enhancedResponse = enhanceGeminiResponse(initialResponse);
-        console.log("Enhanced Groq fallback response with categories:", 
-          Object.keys(enhancedResponse.categories || {}));
-        return enhancedResponse;
-      } catch (fallbackError) {
-        console.error("Both Gemini and Groq fallback failed:", fallbackError);
-        throw error; // Throw the original error if both fail
-      }
-    }
+    // Get AI-generated content using the enhanced and expanded query
+    const response = await generateGeminiContent(expandedQuery);
+    
+    console.log("Received Gemini response of length:", response.text.length);
+    
+    // Build the initial response
+    const initialResponse: GeminiResponse = {
+      text: response.text,
+      query: query,
+      enhancedQuery: enhancedQuery,
+      timestamp: new Date(),
+      isRelevant: isRelevant,
+      // Extract key medical terms that matched in the query
+      medicalTermsDetected: Object.keys(diseaseAliasesMap).filter(term => 
+        normalizedQuery.includes(term.toLowerCase())
+      ).map(term => ({
+        colloquial: term,
+        standard: diseaseAliasesMap[term]
+      }))
+    };
+    
+    // Enhance the response with parsed categories
+    const enhancedResponse = enhanceGeminiResponse(initialResponse);
+    console.log("Enhanced response with categories:", Object.keys(enhancedResponse.categories || {}));
+    return enhancedResponse;
   } catch (error) {
     console.error("Error generating pharmacy response:", error);
     
@@ -249,88 +148,8 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       enhancedQuery: query,
       timestamp: new Date(),
       isRelevant: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      source: "error-fallback"
+      error: error instanceof Error ? error.message : "Unknown error"
     };
-    
-    // For specific disease queries that are failing, provide a default structured response
-    // Expanded to check for many disease types that should always work
-    const queryLower = query.toLowerCase();
-    if (commonDiseases.some(disease => queryLower.includes(disease)) || 
-        Object.keys(diseaseAliasesMap).some(alias => queryLower.includes(alias.toLowerCase()))) {
-        
-      console.log("Providing detailed fallback response for disease query");
-      
-      // Extract the disease name for a better response
-      let diseaseName = "the requested condition";
-      
-      // Try to extract disease name from the query
-      for (const disease of commonDiseases) {
-        if (queryLower.includes(disease)) {
-          diseaseName = disease;
-          break;
-        }
-      }
-      
-      // Check disease aliases too
-      if (diseaseName === "the requested condition") {
-        for (const alias of Object.keys(diseaseAliasesMap)) {
-          if (queryLower.includes(alias.toLowerCase())) {
-            diseaseName = alias;
-            const standardName = diseaseAliasesMap[alias];
-            if (standardName) {
-              diseaseName = standardName;
-            }
-            break;
-          }
-        }
-      }
-      
-      errorResponse.text = `
-1. DISEASE DESCRIPTION
-• ${diseaseName.charAt(0).toUpperCase() + diseaseName.slice(1)} is a recognized medical condition
-• Information about specific types, stages, and variations may vary
-• This condition requires proper medical evaluation and diagnosis
-
-2. DRUG RECOMMENDATIONS
-• Treatment options should be determined by healthcare professionals
-• Medications are typically prescribed based on specific diagnosis, severity, and patient factors
-• Please consult with a qualified healthcare provider for personalized treatment recommendations
-
-3. SIDE EFFECTS & INDICATIONS
-• All medications have potential side effects that vary by individual
-• Common side effects depend on the specific treatment prescribed
-• Close monitoring during treatment is essential
-
-4. CONTRAINDICATIONS & INTERACTIONS
-• Many medications have specific contraindications
-• Drug interactions are possible with various medications
-• Always inform your healthcare provider about all medications you take
-
-5. HERBAL MEDICINE ALTERNATIVES
-• Some complementary treatments may be used alongside conventional medicine
-• Evidence for alternative treatments varies significantly
-• Discuss all alternative treatments with your healthcare provider
-
-6. FOOD-BASED TREATMENTS
-• Dietary changes may help manage symptoms or support treatment
-• Specific nutritional needs should be discussed with healthcare providers
-• A balanced diet is generally recommended during treatment
-
-Medical Disclaimer: This fallback information is not a substitute for professional medical advice. Please consult qualified healthcare professionals for diagnosis and treatment.`;
-      
-      // Create basic categories for the fallback response
-      errorResponse.categories = {
-        diseaseDescription: `• ${diseaseName.charAt(0).toUpperCase() + diseaseName.slice(1)} is a recognized medical condition\n• Information about specific types, stages, and variations may vary\n• This condition requires proper medical evaluation and diagnosis`,
-        drugRecommendations: "• Treatment options should be determined by healthcare professionals\n• Medications are typically prescribed based on specific diagnosis, severity, and patient factors\n• Please consult with a qualified healthcare provider for personalized treatment recommendations",
-        sideEffects: "• All medications have potential side effects that vary by individual\n• Common side effects depend on the specific treatment prescribed\n• Close monitoring during treatment is essential",
-        contraindications: "• Many medications have specific contraindications\n• Drug interactions are possible with various medications\n• Always inform your healthcare provider about all medications you take",
-        herbalAlternatives: "• Some complementary treatments may be used alongside conventional medicine\n• Evidence for alternative treatments varies significantly\n• Discuss all alternative treatments with your healthcare provider",
-        foodBasedTreatments: "• Dietary changes may help manage symptoms or support treatment\n• Specific nutritional needs should be discussed with healthcare providers\n• A balanced diet is generally recommended during treatment"
-      };
-      
-      return errorResponse;
-    }
     
     if (error instanceof Error) {
       throw error;

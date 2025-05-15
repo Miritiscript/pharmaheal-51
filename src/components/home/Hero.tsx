@@ -24,8 +24,7 @@ const Hero: React.FC = () => {
             </div>
             <p className="text-lg mb-8 text-muted-foreground max-w-xl">
               PharmaHeal combines AI assistance, educational videos, and reliable 
-              medication information to empower your health decisions and improve your wellness journey.
-              Ready for successful deployment to Netlify!
+              medication information to empower your health decisions.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg" variant="vibrant">

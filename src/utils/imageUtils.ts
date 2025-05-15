@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
  * Optimizes image loading by providing a reliable proxy to prevent CORS
  * and MIME type issues during deployment
  */
-export const getProxiedImageUrl = async (imageUrl: string): Promise<string> {
+export const getProxiedImageUrl = async (imageUrl: string) => {
   try {
     // If we're in development, just return the original URL
     if (window.location.hostname === 'localhost') {

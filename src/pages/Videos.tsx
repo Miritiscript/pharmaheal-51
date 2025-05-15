@@ -5,76 +5,45 @@ import Footer from '@/components/layout/Footer';
 import VideoHub from '@/components/videos/VideoHub';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { toast } from 'sonner';
-import { preloadImages, LOCAL_FALLBACK_IMAGES } from '@/utils/imageUtils';
 
 const Videos: React.FC = () => {
   const { theme } = useTheme();
-  const [imagesPreloaded, setImagesPreloaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Add an effect to preload only local fallback images
+  // Add an effect to handle loading and error states
   useEffect(() => {
-    // Log that we're starting preload
-    console.log("Starting image preload process");
+    // Show a loading toast
+    const loadingToast = toast.loading("Loading video content...");
     
-    // Preload locally uploaded images as fallbacks
-    try {
-      // First mark as preloaded to prevent long waiting
-      setImagesPreloaded(true);
+    // Simulate a loading delay to ensure images have time to preload
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      toast.dismiss(loadingToast);
       
-      // Then actually preload the images in the background
-      preloadImages(LOCAL_FALLBACK_IMAGES);
-      console.log("Preload image request sent for:", LOCAL_FALLBACK_IMAGES);
-      
-      // Manually verify each image loads
-      const verifyImages = LOCAL_FALLBACK_IMAGES.map(src => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => {
-            console.log(`Verified: ${src}`);
-            resolve(src);
-          };
-          img.onerror = (e) => {
-            console.error(`Failed to verify: ${src}`, e);
-            reject(e);
-          };
-          img.src = src;
-        });
-      });
-      
-      Promise.allSettled(verifyImages)
-        .then(results => {
-          const succeeded = results.filter(r => r.status === 'fulfilled').length;
-          console.log(`Preloaded ${succeeded} out of ${verifyImages.length} images`);
-          
-          if (succeeded === 0) {
-            toast.error("Failed to preload image assets. Some videos may not display correctly.");
-          }
-        });
-    } catch (error) {
-      console.error("Image preloading error:", error);
-      setImagesPreloaded(true);
-    }
+      // Check if navigator is online
+      if (!navigator.onLine) {
+        toast.warning("You appear to be offline. Some content may not load properly.");
+      }
+    }, 1500);
     
-    // Handle unhandled promise rejections that might be related to image loading
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled promise rejection:', event.reason);
-    };
-
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    
-    // Handle image load errors globally
-    const handleImageError = (event: ErrorEvent) => {
-      const target = event.target as HTMLElement;
-      if (target && target.tagName === 'IMG') {
-        console.warn('Image load error:', event);
+    // Handle global errors for YouTube API calls
+    const handleError = (event: ErrorEvent) => {
+      if (event.message && (
+          event.message.includes('googleapis') || 
+          event.message.includes('Failed to fetch')
+      )) {
+        // Suppress repeated YouTube API errors
+        event.preventDefault();
+        console.warn('Suppressed YouTube API error:', event.message);
       }
     };
     
-    window.addEventListener('error', handleImageError, true);
+    window.addEventListener('error', handleError);
     
     return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('error', handleImageError, true);
+      window.removeEventListener('error', handleError);
+      clearTimeout(timer);
+      toast.dismiss(loadingToast);
     };
   }, []);
   
@@ -82,9 +51,7 @@ const Videos: React.FC = () => {
     <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark bg-gray-950' : 'light bg-white'}`}>
       <Navbar />
       <main className="flex-1 pt-24 pb-16">
-        {imagesPreloaded ? (
-          <VideoHub key="preloaded-video-hub" />
-        ) : (
+        {isLoading ? (
           <div className="container mx-auto px-4 text-center py-12">
             <div className="animate-pulse space-y-4">
               <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
@@ -95,6 +62,8 @@ const Videos: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-300">Loading educational videos...</p>
             </div>
           </div>
+        ) : (
+          <VideoHub key="video-hub-component" />
         )}
       </main>
       <Footer />

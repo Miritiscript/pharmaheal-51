@@ -1,7 +1,8 @@
+
 // Cache names
-const CACHE_NAME = 'pharmaheal-v10';
-const DATA_CACHE_NAME = 'pharmaheal-data-v10';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v10';
+const CACHE_NAME = 'pharmaheal-v11';
+const DATA_CACHE_NAME = 'pharmaheal-data-v11';
+const IMAGE_CACHE_NAME = 'pharmaheal-images-v11';
 
 // Files to cache
 const urlsToCache = [
@@ -9,19 +10,15 @@ const urlsToCache = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  // Use the UUIDs of the uploaded images
-  '/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png',
-  '/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png', 
-  '/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png',
-  '/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png'
+  '/logo-icon.png',
+  '/logo-full.png'
 ];
 
 // Local fallback images to pre-cache
 const fallbackImages = [
-  '/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png',
-  '/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png',
-  '/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png',
-  '/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png'
+  '/logo-icon.png',
+  '/logo-full.png',
+  '/favicon.ico'
 ];
 
 // Check if we're in development mode
@@ -113,13 +110,13 @@ if (isDev) {
 
   // Fetch event handler - with improved handling for YouTube content
   self.addEventListener('fetch', (event) => {
+    const requestUrl = new URL(event.request.url);
+    
     // Skip non-GET requests and browser extensions
     if (event.request.method !== 'GET' || 
         event.request.url.startsWith('chrome-extension://')) {
       return;
     }
-    
-    const requestUrl = new URL(event.request.url);
     
     // For YouTube API requests - network only, don't cache
     if (requestUrl.href.includes('googleapis.com/youtube')) {
@@ -169,23 +166,8 @@ if (isDev) {
                   return cachedResponse;
                 }
                 
-                // If no cache hit, return a random fallback image
-                return caches.open(IMAGE_CACHE_NAME)
-                  .then(cache => {
-                    const fallbackUrl = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
-                    return cache.match(new Request(fallbackUrl));
-                  })
-                  .then(fallbackResponse => {
-                    if (fallbackResponse) {
-                      return fallbackResponse;
-                    }
-                    
-                    // Last resort - return a response with placeholder text
-                    return new Response('Image not available', {
-                      status: 404,
-                      headers: {'Content-Type': 'text/plain'}
-                    });
-                  });
+                // If no cache hit, return a fallback image
+                return caches.match('/logo-icon.png');
               });
           })
       );
@@ -204,19 +186,12 @@ if (isDev) {
             caches.open(IMAGE_CACHE_NAME)
               .then(cache => {
                 try {
-                  // Only cache same-origin or CORS-enabled responses
-                  if (response.url.startsWith(self.location.origin) || 
-                      response.headers.get('Access-Control-Allow-Origin')) {
-                    cache.put(event.request, responseToCache).catch(err => {
-                      console.warn('Cache put error:', err);
-                    });
-                  }
+                  cache.put(event.request, responseToCache).catch(err => {
+                    console.warn('Cache put error:', err);
+                  });
                 } catch (err) {
                   console.warn('Cache error:', err);
                 }
-              })
-              .catch(err => {
-                console.warn('Cache open error:', err);
               });
               
             return response;
@@ -228,88 +203,9 @@ if (isDev) {
                   return cachedResponse;
                 }
                 
-                // If no cache hit, return a fallback from IMAGE_CACHE
-                return caches.open(IMAGE_CACHE_NAME)
-                  .then(cache => {
-                    // Get a random fallback image
-                    const fallbackUrl = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
-                    return cache.match(new Request(fallbackUrl));
-                  })
-                  .then(fallbackResponse => {
-                    if (fallbackResponse) {
-                      return fallbackResponse;
-                    }
-                    
-                    // Last resort - try to fetch the first fallback directly
-                    return fetch(fallbackImages[0])
-                      .catch(() => {
-                        return new Response('Failed to load image', {
-                          status: 404,
-                          headers: {'Content-Type': 'text/plain'}
-                        });
-                      });
-                  });
+                // If no cache hit, return logo-icon.png
+                return caches.match('/logo-icon.png');
               });
-          })
-      );
-      return;
-    }
-
-    // For JS and assets - network first
-    if (requestUrl.pathname.endsWith('.js') || requestUrl.pathname.includes('assets/')) {
-      event.respondWith(
-        fetch(event.request)
-          .then(response => {
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                try {
-                  cache.put(event.request, responseToCache).catch(err => {
-                    console.warn('Cache put error for JS/assets:', err);
-                  });
-                } catch (err) {
-                  console.warn('Cache error for JS/assets:', err);
-                }
-              })
-              .catch(err => {
-                console.warn('Cache open error for JS/assets:', err);
-              });
-              
-            return response;
-          })
-          .catch(() => {
-            return caches.match(event.request);
-          })
-      );
-      return;
-    }
-
-    // For API or data requests - network first with cache fallback
-    if (event.request.url.includes('/api/')) {
-      event.respondWith(
-        fetch(event.request)
-          .then((response) => {
-            const responseToCache = response.clone();
-            
-            caches.open(DATA_CACHE_NAME)
-              .then((cache) => {
-                try {
-                  cache.put(event.request, responseToCache).catch(err => {
-                    console.warn('Cache put error for API:', err);
-                  });
-                } catch (err) {
-                  console.warn('Cache error for API:', err);
-                }
-              })
-              .catch(err => {
-                console.warn('Cache open error for API:', err);
-              });
-              
-            return response;
-          })
-          .catch(() => {
-            return caches.match(event.request);
           })
       );
       return;
@@ -340,9 +236,6 @@ if (isDev) {
                   } catch (err) {
                     console.warn('Cache error for other resources:', err);
                   }
-                })
-                .catch(err => {
-                  console.warn('Cache open error for other resources:', err);
                 });
                 
               return response;
@@ -350,6 +243,9 @@ if (isDev) {
             .catch(error => {
               console.error('Fetch failed:', error);
               // Return a default offline page or message
+              if (requestUrl.pathname === '/') {
+                return caches.match('/index.html');
+              }
               return new Response('You are offline and this resource is not cached.', {
                 status: 503,
                 headers: {'Content-Type': 'text/plain'}
@@ -357,16 +253,5 @@ if (isDev) {
             });
         })
     );
-  });
-
-  // Navigation fallback - return index.html for all navigation requests
-  self.addEventListener('fetch', (event) => {
-    if (event.request.mode === 'navigate') {
-      event.respondWith(
-        fetch(event.request).catch(() => {
-          return caches.match('/index.html');
-        })
-      );
-    }
   });
 }

@@ -1,24 +1,24 @@
 
 // Define common fallback images - stored locally to avoid Unsplash hotlink restrictions
 export const FALLBACK_IMAGES = [
-  "/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png",
-  "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
-  "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
-  "/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png"
+  "/logo-icon.png",
+  "/logo-full.png",
+  "/favicon.ico",
+  "/placeholder.svg"
 ];
 
 // Local uploaded images as additional fallbacks
 export const LOCAL_FALLBACK_IMAGES = [
-  "/lovable-uploads/c41cc21a-4229-44bd-8521-97ddbee2e097.png",
-  "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png",
-  "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
-  "/lovable-uploads/2d7a65c0-4a7b-4d75-bcb6-29dd9f040a7c.png"
+  "/logo-icon.png",
+  "/logo-full.png",
+  "/favicon.ico",
+  "/placeholder.svg"
 ];
 
 // YouTube specific fallbacks
 export const YOUTUBE_FALLBACK_IMAGES = [
-  "/lovable-uploads/98c1024c-5d0f-43e8-8737-0f8a1d3675e7.png",
-  "/lovable-uploads/31e5d199-ecbb-43d5-a341-037d83220873.png"
+  "/logo-icon.png",
+  "/logo-full.png"
 ];
 
 // Function to safely load images with fallbacks
@@ -32,7 +32,10 @@ export const preloadImages = (imageSrcs: string[]): void => {
   filteredSrcs.forEach(src => {
     const img = new Image();
     img.onload = () => console.log(`Preloaded: ${src}`);
-    img.onerror = (e) => console.error(`Failed to preload local image: ${src}`, e);
+    img.onerror = (e) => {
+      console.warn(`Failed to preload local image: ${src}`);
+      // Don't treat this as a fatal error
+    };
     img.src = src;
   });
 };
@@ -57,10 +60,11 @@ export const fixYouTubeThumbnailUrl = (videoId: string): string => {
   }
   
   try {
-    // Always ensure we use HTTPS
+    // Try HTTPS first
     return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
   } catch (error) {
-    console.error("Error creating YouTube thumbnail URL:", error);
+    // If that fails, fallback
+    console.warn("Error creating YouTube thumbnail URL, using fallback");
     return LOCAL_FALLBACK_IMAGES[0];
   }
 };
@@ -73,7 +77,7 @@ export const ensureSecureImageUrl = (url: string): string => {
   
   // If it's a YouTube image URL, ensure HTTPS
   if (url.includes('ytimg.com') || url.includes('youtube.com')) {
-    // Convert HTTP to HTTPS for YouTube URLs
+    // Convert HTTP to HTTPS for YouTube URLs if needed
     if (url.startsWith('http:')) {
       return url.replace('http:', 'https:');
     }
@@ -102,6 +106,6 @@ export const getBestYouTubeThumbnail = (videoId: string): string => {
     return LOCAL_FALLBACK_IMAGES[0];
   }
   
-  // Always use HTTPS for YouTube thumbnails
+  // Try HTTPS for YouTube thumbnails
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 };

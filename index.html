@@ -11,12 +11,12 @@
     <link rel="manifest" href="/manifest.json" />
     <title>PharmaHeal - AI Pharmacy Assistant</title>
     
-    <!-- Security headers for API access -->
+    <!-- Security headers for API access with improved image handling -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co;
       style-src 'self' 'unsafe-inline';
-      img-src 'self' data: blob: https://*;
+      img-src 'self' data: blob: https://* http://*;
       font-src 'self';
       connect-src 'self' 
         https://*.supabase.co
@@ -28,8 +28,10 @@
         https://*.lovable.ai
         https://*.lovable.app
         https://*.lovable.dev
+        https://img.youtube.com
+        https://i.ytimg.com
         wss://*.supabase.co;
-      frame-src 'self';
+      frame-src 'self' https://www.youtube.com;
       media-src 'self';
     ">
   </head>

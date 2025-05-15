@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Play, ChevronRight } from 'lucide-react';
@@ -25,8 +24,12 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
   
   // Preload all locally available images to ensure they're in cache
   useEffect(() => {
-    // Preload local fallbacks
-    preloadImages(LOCAL_FALLBACK_IMAGES);
+    // Preload local fallbacks but don't make this operation block rendering
+    try {
+      preloadImages(LOCAL_FALLBACK_IMAGES);
+    } catch (error) {
+      console.warn("Error preloading images:", error);
+    }
   }, []);
   
   const handleImageError = (videoId: string) => {
@@ -42,12 +45,7 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
     // If image already failed, use fallback
     if (failedImages[video.videoId]) {
       // Use a local fallback image
-      const localIndex = Math.abs(video.videoId.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0) % LOCAL_FALLBACK_IMAGES.length);
-      
-      return LOCAL_FALLBACK_IMAGES[localIndex];
+      return "/logo-icon.png";
     }
     
     // If it's a YouTube video ID, try to get the best thumbnail
@@ -61,7 +59,12 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
       }
       
       // Otherwise, generate a proper YouTube thumbnail URL
-      return getBestYouTubeThumbnail(video.videoId);
+      try {
+        return getBestYouTubeThumbnail(video.videoId);
+      } catch (error) {
+        console.warn("Error getting YouTube thumbnail:", error);
+        return "/logo-icon.png";
+      }
     }
     
     // If thumbnail doesn't start with https or http, it might be a relative path
@@ -76,7 +79,7 @@ const VideoRow: React.FC<VideoRowProps> = ({ category, onVideoClick }) => {
     
     // If all else fails, use a local fallback
     if (!video.thumbnail) {
-      return LOCAL_FALLBACK_IMAGES[0];
+      return "/logo-icon.png";
     }
     
     // Otherwise use the provided thumbnail

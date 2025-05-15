@@ -37,8 +37,26 @@ const medicalSynonyms: Record<string, string> = {
   "prn": "as needed",
   "otc": "over the counter",
   "gi": "gastrointestinal",
-  "cv": "cardiovascular"
+  "cv": "cardiovascular",
+  // Added more common medical abbreviations
+  "afib": "atrial fibrillation",
+  "ca": "cancer",
+  "cad": "coronary artery disease",
+  "chf": "congestive heart failure",
+  "copd": "chronic obstructive pulmonary disease",
+  "dvt": "deep vein thrombosis",
+  "mi": "myocardial infarction",
+  "ra": "rheumatoid arthritis",
+  "uti": "urinary tract infection",
+  "tb": "tuberculosis"
 };
+
+// Common disease names to ensure they're recognized
+const commonDiseases = [
+  "leukemia", "lymphoma", "melanoma", "alzheimer", "parkinson", 
+  "crohn", "lupus", "fibromyalgia", "multiple sclerosis", "ms",
+  "epilepsy", "schizophrenia", "bipolar", "hepatitis", "cirrhosis"
+];
 
 // Function to normalize query with medical synonyms
 function normalizeQuery(query: string): string {
@@ -68,19 +86,43 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const normalizedQuery = normalizeQuery(query);
     console.log(`Original query: "${query}" -> Normalized: "${normalizedQuery}"`);
     
+    // Check if query contains any common disease names - immediate acceptance
+    const containsCommonDisease = commonDiseases.some(disease => 
+      normalizedQuery.includes(disease)
+    );
+    
+    if (containsCommonDisease) {
+      console.log("Query contains a common disease name, accepting as medically relevant");
+    }
+    
     // Use our local validator first as a safety check
     const localValidation = isValidMedicalQuery(normalizedQuery);
     console.log("Local relevance validation result:", localValidation);
     
-    let isRelevant = localValidation; // Default to local validation result
+    let isRelevant = localValidation || containsCommonDisease; // Accept if either check passes
     
-    // Then verify with Gemini API for more accurate checking
-    try {
-      isRelevant = await checkMedicalRelevance(normalizedQuery);
-      console.log("Gemini relevance check result:", isRelevant);
-    } catch (error) {
-      // If Gemini API fails, fall back to local validation result
-      console.warn("Gemini relevance check failed, using local validation:", error);
+    // Then verify with Gemini API for more accurate checking if needed
+    if (!isRelevant) {
+      try {
+        isRelevant = await checkMedicalRelevance(normalizedQuery);
+        console.log("Gemini relevance check result:", isRelevant);
+      } catch (error) {
+        // If Gemini API fails, fall back to local validation result
+        console.warn("Gemini relevance check failed, using local validation:", error);
+        isRelevant = true; // Default to accepting if the check fails
+      }
+    }
+    
+    // Always allow disease names through regardless of relevance checks
+    const isDiseaseQuery = query.toLowerCase().split(/\s+/).some(word => {
+      return Object.keys(diseaseAliasesMap).some(alias => 
+        alias.toLowerCase() === word.toLowerCase()
+      );
+    });
+    
+    if (isDiseaseQuery) {
+      console.log("Query contains disease name, overriding relevance check");
+      isRelevant = true;
     }
     
     // Allow through if:
@@ -89,7 +131,8 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
     const interaction = interactionTracker[normalizedQuery];
     const allowDueToMultipleAttempts = interaction && interaction.count > 2;
     
-    if (!isRelevant && !allowDueToMultipleAttempts && !localValidation) {
+    // Accept almost everything for improved user experience, reject only obvious non-medical queries
+    if (!isRelevant && !allowDueToMultipleAttempts && !localValidation && !isDiseaseQuery && !containsCommonDisease) {
       console.log("Query rejected as non-medical:", normalizedQuery);
       throw new Error(
         "PharmaHeal is a medical assistant. Please ask a question related to health, medication, or wellness."
@@ -150,6 +193,56 @@ export const generatePharmacyResponse = async (query: string): Promise<GeminiRes
       isRelevant: false,
       error: error instanceof Error ? error.message : "Unknown error"
     };
+    
+    // For specific disease queries that are failing, provide a default structured response
+    if (query.toLowerCase().includes("leukemia") || 
+        query.toLowerCase().includes("cancer") || 
+        commonDiseases.some(disease => query.toLowerCase().includes(disease))) {
+        
+      console.log("Providing fallback response for disease query");
+      errorResponse.text = `
+1. DISEASE DESCRIPTION
+• The requested disease information could not be retrieved from the API
+• Please try again later or try a different phrasing
+• This is a known disease that should be supported
+
+2. DRUG RECOMMENDATIONS
+• Please consult with a healthcare professional for appropriate treatments
+• Treatment options vary based on type, stage, and individual factors
+• Error occurred: API communication issue
+
+3. SIDE EFFECTS & INDICATIONS
+• Medication side effects depend on specific treatments prescribed
+• Please consult a healthcare provider for personalized information
+• Common treatments may include various classes of medications
+
+4. CONTRAINDICATIONS & INTERACTIONS
+• Many treatments have specific contraindications
+• Drug interactions are possible with various medications
+• Always inform your healthcare provider about all medications you take
+
+5. HERBAL MEDICINE ALTERNATIVES
+• Scientific evidence for herbal treatments may be limited
+• Always consult healthcare providers before trying alternative treatments
+• Do not replace conventional treatments with alternatives without medical guidance
+
+6. FOOD-BASED TREATMENTS
+• No scientifically-backed food-based treatments found for this condition
+
+Medical Disclaimer: This information is not a substitute for professional medical advice. Please consult healthcare professionals.`;
+      
+      // Create basic categories for the fallback response
+      errorResponse.categories = {
+        diseaseDescription: "• The requested disease information could not be retrieved from the API\n• Please try again later or try a different phrasing\n• This is a known disease that should be supported",
+        drugRecommendations: "• Please consult with a healthcare professional for appropriate treatments\n• Treatment options vary based on type, stage, and individual factors\n• Error occurred: API communication issue",
+        sideEffects: "• Medication side effects depend on specific treatments prescribed\n• Please consult a healthcare provider for personalized information\n• Common treatments may include various classes of medications",
+        contraindications: "• Many treatments have specific contraindications\n• Drug interactions are possible with various medications\n• Always inform your healthcare provider about all medications you take",
+        herbalAlternatives: "• Scientific evidence for herbal treatments may be limited\n• Always consult healthcare providers before trying alternative treatments\n• Do not replace conventional treatments with alternatives without medical guidance",
+        foodBasedTreatments: "• No scientifically-backed food-based treatments found for this condition"
+      };
+      
+      return errorResponse;
+    }
     
     if (error instanceof Error) {
       throw error;

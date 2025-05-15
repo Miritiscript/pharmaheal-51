@@ -43,6 +43,13 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name].[hash].[ext]'
       },
     },
+    // Ensure proper MIME types for module scripts
+    minify: 'terser',
+    terserOptions: {
+      format: {
+        comments: false
+      }
+    },
   },
   // Explicitly define development behavior
   mode: process.env.NODE_ENV || mode,

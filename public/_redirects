@@ -1,2 +1,7 @@
 
+# Redirect all routes to index.html for SPA
 /*    /index.html   200
+
+# Explicitly handle JS modules with correct MIME types
+/*.js    /:splat   200!
+/*.mjs   /:splat   200!

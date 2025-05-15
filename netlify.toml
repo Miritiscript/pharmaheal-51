@@ -43,7 +43,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.googleusercontent.com https://*.unsplash.com https://img.youtube.com https://i.ytimg.com blob: /lovable-uploads/*; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com https://www.youtube.com; media-src 'self' https://*.youtube.com https://www.youtube.com;"
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' https://cdn.gpteng.co; connect-src 'self' https://*.lovable.dev https://generativelanguage.googleapis.com https://*.youtube.com https://*.googleapis.com; img-src 'self' data: https://*.ytimg.com https://*.googleusercontent.com https://*.unsplash.com https://img.youtube.com https://i.ytimg.com blob: https://lovable-uploads; style-src 'self' 'unsafe-inline'; frame-src 'self' https://*.youtube.com https://www.youtube.com; media-src 'self' https://*.youtube.com https://www.youtube.com;"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"

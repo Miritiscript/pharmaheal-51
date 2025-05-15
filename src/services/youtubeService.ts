@@ -2,7 +2,7 @@
 // This file would be in src/services/youtubeService.ts
 import { VideoCategory, mockCategories } from '@/data/mockVideos';
 
-// YouTube API Key
+// YouTube API Key 
 const YOUTUBE_API_KEY = 'AIzaSyBW4M1YVlcC6XUC_yvoOR5CUvlPvvyVlrc';
 
 /**
@@ -23,37 +23,49 @@ export const validateVideoId = (videoId: string): boolean => {
 };
 
 /**
- * Makes a real API call to YouTube Data API
+ * Makes a real API call to YouTube Data API with CORS handling
  */
 const fetchFromYouTubeAPI = async (query: string, maxResults: number = 12) => {
   console.log(`Fetching from YouTube API for: ${query}`);
   
-  const endpoint = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`;
+  // Try to use proxy first for production environment
+  const useProxy = !window.location.hostname.includes('localhost') && 
+                   !window.location.hostname.includes('lovable.dev');
   
-  const response = await fetch(endpoint, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
-    }
-  });
+  // For production, use a proxy to avoid CORS issues
+  const endpoint = useProxy 
+    ? `/youtube-proxy/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`
+    : `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`;
   
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("YouTube API error:", errorData);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
     
-    if (response.status === 403) {
-      throw new Error("The request cannot be completed because you have exceeded your quota.");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: { message: `HTTP error ${response.status}` } }));
+      console.error("YouTube API error:", errorData);
+      
+      if (response.status === 403) {
+        throw new Error("The request cannot be completed because you have exceeded your quota.");
+      }
+      
+      throw new Error(`YouTube API error: ${errorData.error?.message || response.statusText}`);
     }
     
-    throw new Error(`YouTube API error: ${errorData.error?.message || response.statusText}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Failed to fetch YouTube data: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
   }
-  
-  const data = await response.json();
-  return data;
 };
 
 /**
- * Fetches YouTube videos for a specific category
+ * Fetches YouTube videos for a specific category with improved error handling
  */
 export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Promise<VideoCategory> => {
   try {
@@ -90,7 +102,7 @@ export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Pr
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`YouTube API search error:`, error);
-    console.error(`Error fetching YouTube videos for '${category.title}':`, error);
+    console.warn(`Falling back to mock data for '${category.title}' due to: ${errorMessage}`);
     
     // Find the corresponding category in mock data
     const mockCategory = mockCategories.find(c => c.id === category.id || c.title === category.title);
@@ -107,6 +119,7 @@ export const fetchYouTubeVideosForCategory = async (category: VideoCategory): Pr
 
 /**
  * Fetches video categories from the YouTube API or falls back to mock data
+ * Silently handles errors and always returns usable data
  */
 export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   try {
@@ -140,7 +153,7 @@ export const fetchVideoCategories = async (): Promise<VideoCategory[]> => {
   } catch (error) {
     console.error("Error fetching videos:", error);
     
-    // Return mock data as fallback
+    // Return mock data as fallback without showing error to user
     return mockCategories;
   }
 };

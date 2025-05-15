@@ -1,8 +1,8 @@
 
 // Cache names - update version to refresh caches
-const CACHE_NAME = 'pharmaheal-v12';
-const DATA_CACHE_NAME = 'pharmaheal-data-v12';
-const IMAGE_CACHE_NAME = 'pharmaheal-images-v12';
+const CACHE_NAME = 'pharmaheal-v13';
+const DATA_CACHE_NAME = 'pharmaheal-data-v13';
+const IMAGE_CACHE_NAME = 'pharmaheal-images-v13';
 
 // Files to cache
 const urlsToCache = [
@@ -110,7 +110,7 @@ if (isDev) {
     );
   });
 
-  // Fetch event handler - with improved handling for YouTube content
+  // Improved fetch event handler with better error reporting
   self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
     
@@ -120,8 +120,8 @@ if (isDev) {
       return;
     }
     
-    // Handle JS and CSS files - network first with cache fallback
-    if (requestUrl.pathname.match(/\.(js|css)$/)) {
+    // Handle asset files (JS, CSS) - network first with cache fallback
+    if (requestUrl.pathname.match(/\.(js|css)$/) || requestUrl.pathname.includes('/assets/')) {
       event.respondWith(
         fetch(event.request)
           .then(response => {
@@ -133,23 +133,31 @@ if (isDev) {
                 try {
                   cache.put(event.request, responseToCache);
                 } catch (err) {
-                  console.warn('Cache put error for JS/CSS:', err);
+                  console.warn('Cache put error for assets:', err);
                 }
               });
               
             return response;
           })
           .catch(() => {
+            console.warn(`Failed to fetch asset: ${event.request.url}, trying cache`);
             return caches.match(event.request);
           })
       );
       return;
     }
     
-    // For YouTube API requests - network only, don't cache
-    if (requestUrl.href.includes('googleapis.com/youtube')) {
+    // For YouTube API requests - network only with error handling
+    if (requestUrl.href.includes('googleapis.com/youtube') || 
+        requestUrl.href.includes('youtube-proxy')) {
       event.respondWith(
         fetch(event.request)
+          .then(response => {
+            if (!response.ok) {
+              console.warn(`YouTube API returned ${response.status}: ${response.statusText}`);
+            }
+            return response;
+          })
           .catch(error => {
             console.error('YouTube API fetch failed:', error);
             return new Response(JSON.stringify({ 
@@ -221,6 +229,7 @@ if (isDev) {
             return response;
           })
           .catch(() => {
+            console.warn(`Failed to fetch image: ${event.request.url}, trying cache`);
             return caches.match(event.request)
               .then(cachedResponse => {
                 if (cachedResponse) {

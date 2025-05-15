@@ -6,7 +6,6 @@ import VideoPlayer from './VideoPlayer';
 import { Video, VideoCategory, mockCategories } from '@/data/mockVideos';
 import { fetchVideoCategories } from '@/services/youtubeService';
 import VideoSkeleton from './VideoSkeleton';
-import { toast } from 'sonner';
 import SearchBar from '../search/SearchBar';
 import { Button } from '../ui/Button';
 import { Filter } from 'lucide-react';

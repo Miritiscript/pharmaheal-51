@@ -6,3 +6,6 @@
 
 # Explicitly handle API fallbacks
 /api/*  /.netlify/functions/:splat  200
+
+# Handle YouTube API proxy
+/youtube-proxy/*  https://www.googleapis.com/:splat  200

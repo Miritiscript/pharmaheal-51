@@ -10,9 +10,9 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://* http://*; font-src 'self'; connect-src 'self' https://*.supabase.co https://supabase.co https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://*.lovable.ai https://*.lovable.app https://*.lovable.dev wss://*.supabase.co; frame-src 'self' https://www.youtube.com; media-src 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://* http://*; font-src 'self'; connect-src 'self' https://*.supabase.co https://supabase.co https://api.openai.com https://api.groq.com https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://*.lovable.ai https://*.lovable.app https://*.lovable.dev https://www.googleapis.com wss://*.supabase.co; frame-src 'self' https://www.youtube.com; media-src 'self';"
 
-# Add cache control headers for better image caching and proper MIME types
+# Fix MIME type issues for assets
 [[headers]]
   for = "/*.css"
   [headers.values]
@@ -21,6 +21,13 @@
 
 [[headers]]
   for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=31536000"
+
+# Fix for module scripts
+[[headers]]
+  for = "/assets/*.js"
   [headers.values]
     Content-Type = "application/javascript"
     Cache-Control = "public, max-age=31536000"
@@ -49,8 +56,24 @@
     Content-Type = "image/x-icon"
     Cache-Control = "public, max-age=31536000"
 
-# Handle redirects properly
+# Handle SPA routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = true
+
+# Specific rule for asset files to ensure proper MIME types
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
+
+# Fix for YouTube API calls
+[[redirects]]
+  from = "/youtube-proxy/*"
+  to = "https://www.googleapis.com/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*"}
